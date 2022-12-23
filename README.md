@@ -1,92 +1,114 @@
-# Serverless Distributed Data Processing
+# Serverless Distributed Data Processing Pipeline
+
+In this project, you will have to build a distributed data processing pipeline using Azure Functions.
 
 
+## Implementation
 
-## Getting started
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- Decide on the different functions that will make your pipeline.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- Configure the triggers and bindings used by the functions (e.g. Blob Storage triggers, message queue triggers, timer triggers)
 
-## Add your files
+- Write the code for the functions, which will perform the different data processing tasks (e.g. filtering, partitioning, aggregating data)
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+- Test the pipeline locally using the Azure Functions Core Tools ([Documentation](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=v4%2Clinux%2Ccsharp%2Cportal%2Cbash), [GitHub](https://github.com/Azure/azure-functions-core-tools)) to ensure that it is working as expected. The Azure Functions Core Tools include a local development server and an emulator for the Azure Functions runtime, which enables you to test your functions without having to deploy them to the cloud. 
+
+- To use the Azure Functions Core Tools, you will need to install them on your development machine and then create a local Azure Functions project using the Azure Functions CLI or Visual Studio. You can then develop and debug your functions locally using the tools, and use the emulator to simulate the triggers and bindings that your functions will use when they are deployed to the cloud.
+
+## Deploy on Azure Functions
+
+- Once you have tested your functions locally and are satisfied with their behavior, you can deploy them to the cloud and start consuming cloud credits by using the ```az functionapp create```  and  ```az functionapp publish``` commands to create and deploy your Azure Functions app to an Azure subscription.
+
+- Use the Azure Functions CLI ([GitHub](https://github.com/Azure/azure-functions-cli)) to create and deploy an Azure Functions app. ([Plugin for VS Code](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs-code?tabs=csharp), [Plugin for Visual Studio](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs?tabs=in-process))
+
+- Optimize the pipeline as needed by monitoring, scaling the number of functions, adjusting the triggers and bindings, or implementing more efficient shared state management.
+
+## Shared Storage Options
+
+Some of the options for sharing state in the Azure ecosystem are the following:
+
+- Azure Blob Storage: This option allows you to store state in Azure Blob Storage, which is a cloud-based file storage service. This option is suitable for scenarios where you need to store large amounts of data that needs to be persisted across function executions.
+- Azure Table Storage: This option allows you to store state in Azure Table Storage, which is a NoSQL key-value store. 
+- Azure Queue Storage: This option allows you to store state in Azure Queue Storage, which is a cloud-based message queue service. This option is suitable for scenarios where you need to store state that needs to be persisted across function executions and is not sensitive to high latency. 
+- Azure Redis Cache: This option allows you to store state in Azure Redis Cache, which is a in-memory data store that supports various data structures. This option is suitable for scenarios where you need to store state that needs to be persisted across function executions and requires low latency.
+- Azure Cosmos DB: This option allows you to store state in Azure Cosmos DB, which is a NoSQL database that supports a variety of data models and APIs. 
+
+Υou will have to use some of them and compare them.
+
+## Trigger Options
+
+There are several types of triggers that can be used to invoke Azure Functions. Some of them are the following:
+
+- HTTP triggers: These triggers are activated by HTTP requests. They can be used to create APIs or to respond to webhooks.
+
+- Timer triggers: These triggers allow you to schedule your functions to run at a specific time or on a specific schedule.
+
+- Blob storage triggers: These triggers allow you to respond to changes in Azure Blob storage, such as the creation of a new blob or the update of an existing blob.
+
+- Queue storage triggers: These triggers allow you to process messages from an Azure Queue storage queue.
+
+
+## Workload, Tasks and Requirements
+
+DISCLAIMER: This part is still in draft mode, dataset and query might change, but it will definitely involve processing of CSV files and a similar/the same query.
+
+### Load test dataset
+
+A test dataset you can use is the customer table from the TPC-H benchmark. You can download a 1 GB file to start with from our server. You can find tools and instructions on how to generate a larger dataset [here](testing_data/).
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.db.in.tum.de/cloud-based-data-processing-22/serverless-distributed-data-processing.git
-git branch -M main
-git push -uf origin main
+wget https://db.in.tum.de/teaching/ws2223/clouddataprocessing/data/customer.csv
 ```
 
-## Integrate with your tools
+### Split into 100 partitions
 
-- [ ] [Set up project integrations](https://gitlab.db.in.tum.de/cloud-based-data-processing-22/serverless-distributed-data-processing/-/settings/integrations)
+```
+cd testing_data
+chmod +x splitCSV.sh
+./splitCSV.sh customer.csv
+```
 
-## Collaborate with your team
+### Table Columns
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+<img src="images/customer.png" width=128/>
 
-## Test and Deploy
+The dataset is a CSV file with 8 data columns (customer key, customer name, address, nation key, phone, account balance, market segment, comment)
 
-Use the built-in continuous integration in GitLab.
+### Example Query
+- Find the mean customer account balance per nation. (for each value of the 4th column, find the mean value of the 6th column)
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
 
-***
+### Tasks
 
-# Editing this README
+- Draw a high level diagram of your pipeline, showing the different types of functions that you are using with their inputs and outputs being shown clearly. Explain your design decisions, and evaluate it in terms of non-functional requirements (performance, fault-tolerance).
+- Implement a working solution using Azure stateless functions,  for the following use cases.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### Use Cases
+- Static: Store all your data partitions to an Azure Blob and process them to return the result of the query.
+- Dynamic: Write a script that uploads data partitions to an Azure Blob with time intervals, to check if your triggers are working correctly, and the result is updated in an event-driven fashion.
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### Requirements
 
-## Name
-Choose a self-explaining name for your project.
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+### Tips
+- Start simple and implement the data processing part stage by stage. You can first use a single function per stage and a small dataset. When you get it working, make it scalable.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+## Draft Report Questions
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+Potential Questions:
+- How do different approaches to storing intermediate results, such as using a message queue, a shared database, or a distributed data structure, impact  the overall performance and efficiency of the pipeline?
+- How do different approaches to triggering the functions in the pipeline, such as using a timer trigger or an event trigger, impact the overall performance and efficiency of the pipeline?
+- How do different approaches to scaling the pipeline, such as using autoscaling or manually adjusting the number of functions, impact the overall performance and efficiency of the pipeline?
+- How do different approaches to handling stragglers, such as using retries or timeouts, impact the overall performance and efficiency of the pipeline?
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## Submission:
+You can submit everything via GitLab.
+First fork this repository, and add all members of your group to a single repository.
+Then, in this group repository, add:
+* Names of all members of your group in a groupMembers.txt file
+* Code that implements the assignment
+* Test scripts that demonstrate the capabilities of your solution
+* A written report giving a brief description of your implementation, and answering the design questions.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
