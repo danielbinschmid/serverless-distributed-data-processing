@@ -112,3 +112,13 @@ Then, in this group repository, add:
 * Test scripts that demonstrate the capabilities of your solution
 * A written report giving a brief description of your implementation, and answering the design questions.
 
+## Background Reading
+If the topic interests you and you want to read more about the current state of serverless computing as well as some interesting research systems I have upload four papers on Moodle in the background reading folder:
+
+Survey Papers:
+- Serverless Computing: One Step Forward, Two Steps Back
+- Le Taureau: Deconstructing the Serverless Landscape & A Look Forward
+
+Systems from Academia:
+- Lambada: Interactive Data Analytics on Cold Data Using Serverless Cloud Infrastructure
+- Starling: A Scalable Query Engine on Cloud Functions
