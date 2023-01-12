@@ -2,66 +2,33 @@
 
 In this project, you will have to build a distributed data processing pipeline using Azure Functions.
 
+The pipeline will receive CSV files containing customer data, and the goal is to calculate the mean customer account balance per country for demographic analysis purposes.
 
-## Implementation
+## Pipeline Requirements
 
+Your solution will have to be a **multi-stage** pipeline, with a different function for each stage (e.g. 1. partitioning 2. aggregating 3. merging). It should also be **scalable**, allowing for multiple function instances to process data in parallel in case of handling large data amounts. 
 
-- Decide on the different functions that will make your pipeline.
+Each function instance has its own environment and state, so make sure that your functions are designed to be **stateless** and are able to share data between instances. There are different means of sharing state between the stages in Azure. (e.g. Azure Blob Storage, Azure Queue Storage, Azure Table Storage, Azure Event Hub, Shared Database).
 
-- Configure the triggers and bindings used by the functions (e.g. Blob Storage triggers, message queue triggers, timer triggers)
+## Shared State Requirements and Tasks
 
-- Write the code for the functions, which will perform the different data processing tasks (e.g. filtering, partitioning, aggregating data)
+Experiment with two options for sharing state, and provide two alternative working pipelines for the problem (e.g. one storing intermediate data at Azure Blob Storage and one at Azure Queue Storage).
 
-- Test the pipeline locally using the Azure Functions Core Tools ([Documentation](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=v4%2Clinux%2Ccsharp%2Cportal%2Cbash), [GitHub](https://github.com/Azure/azure-functions-core-tools)) to ensure that it is working as expected. The Azure Functions Core Tools include a local development server and an emulator for the Azure Functions runtime, which enables you to test your functions without having to deploy them to the cloud. 
+You will then compare the two pipelines in terms of data processing speed, resource usage, and monetary cost. Document the pros and cons of each implementation, and, optionally, provide a recommendation for the best approach depending on the specific use case.
 
-- To use the Azure Functions Core Tools, you will need to install them on your development machine and then create a local Azure Functions project using the Azure Functions CLI or Visual Studio. You can then develop and debug your functions locally using the tools, and use the emulator to simulate the triggers and bindings that your functions will use when they are deployed to the cloud.
+## Dataset
 
-## Deploy on Azure Functions
+The dataset that we use is the customers table from the TPC-H benchmark, which is a benchmark widely used in research to benchmark databases.
 
-- Once you have tested your functions locally and are satisfied with their behavior, you can deploy them to the cloud and start consuming cloud credits by using the ```az functionapp create```  and  ```az functionapp publish``` commands to create and deploy your Azure Functions app to an Azure subscription.
-
-- Use the Azure Functions CLI ([GitHub](https://github.com/Azure/azure-functions-cli)) to create and deploy an Azure Functions app. ([Plugin for VS Code](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs-code?tabs=csharp), [Plugin for Visual Studio](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs?tabs=in-process))
-
-- Optimize the pipeline as needed by monitoring, scaling the number of functions, adjusting the triggers and bindings, or implementing more efficient shared state management.
-
-## Shared Storage Options
-
-Some of the options for sharing state in the Azure ecosystem are the following:
-
-- Azure Blob Storage: This option allows you to store state in Azure Blob Storage, which is a cloud-based file storage service. This option is suitable for scenarios where you need to store large amounts of data that needs to be persisted across function executions.
-- Azure Table Storage: This option allows you to store state in Azure Table Storage, which is a NoSQL key-value store. 
-- Azure Queue Storage: This option allows you to store state in Azure Queue Storage, which is a cloud-based message queue service. This option is suitable for scenarios where you need to store state that needs to be persisted across function executions and is not sensitive to high latency. 
-- Azure Redis Cache: This option allows you to store state in Azure Redis Cache, which is a in-memory data store that supports various data structures. This option is suitable for scenarios where you need to store state that needs to be persisted across function executions and requires low latency.
-- Azure Cosmos DB: This option allows you to store state in Azure Cosmos DB, which is a NoSQL database that supports a variety of data models and APIs. 
-
-Υou will have to use some of them and compare them.
-
-## Trigger Options
-
-There are several types of triggers that can be used to invoke Azure Functions. Some of them are the following:
-
-- HTTP triggers: These triggers are activated by HTTP requests. They can be used to create APIs or to respond to webhooks.
-
-- Timer triggers: These triggers allow you to schedule your functions to run at a specific time or on a specific schedule.
-
-- Blob storage triggers: These triggers allow you to respond to changes in Azure Blob storage, such as the creation of a new blob or the update of an existing blob.
-
-- Queue storage triggers: These triggers allow you to process messages from an Azure Queue storage queue.
-
-
-## Workload, Tasks and Requirements
-
-DISCLAIMER: This part is still in draft mode, dataset and query might change, but it will definitely involve processing of CSV files and a similar/the same query.
-
-### Load test dataset
-
-A test dataset you can use is the customer table from the TPC-H benchmark. You can download a 1 GB file to start with from our server. You can find tools and instructions on how to generate a larger dataset [here](testing_data/).
+You can download a 1 GB file to start with from our server. 
 
 ```
 wget https://db.in.tum.de/teaching/ws2223/clouddataprocessing/data/customer.csv
 ```
 
-### Split into 100 partitions
+You can find tools and instructions on how to generate a larger dataset [here](testing_data/).
+
+You can also find scripts to partition it in 100 chunks.
 
 ```
 cd testing_data
@@ -75,42 +42,70 @@ chmod +x splitCSV.sh
 
 The dataset is a CSV file with 8 data columns (customer key, customer name, address, nation key, phone, account balance, market segment, comment)
 
-### Example Query
-- Find the mean customer account balance per nation. (for each value of the 4th column, find the mean value of the 6th column)
+## Query
+
+Find the mean customer account balance per nation. (for each value of the 4th column, find the mean value of the 6th column).
+
+You can find the result of the query for the 1GB file in the testqueryresult.txt.
+
+## Tests
+
+You can find a simple test.py file that uploads a file from a filelist.txt file to an Azure Blob container every 10 seconds. You can configure it and use it as a basis for testing. The filelist.txt file involves the names of all the 100 partitions from the above step. 
+
+Apart from that, you will need to implement:
+- load test(s) to measure response time and throughput of the pipeline for a large number of concurrent data uploads
+- scale test(s) to measure how using more function instances in the pipeline stages that are stressed will affect response time and throughput. You can also use the autoscaling option of Azure Functions and observe how the number of instances changes when there is more or less traffic.
+
+## Report Questions
+
+- How did you design and implement the data processing pipeline? Include a high level diagram with the different types of functions that you are using with their inputs and outputs being shown clearly (you can use the images provided in the Function monitor in the Azure Portal). Explain your design decisions.
+
+- How did you ensure that the pipeline could scale and handle large amount of data? How do different approaches to scaling the pipeline in Azure Functions (Manual Scaling, Autoscaling, Consumption Plan), impact the overall performance and efficiency of the pipeline?
+
+- How did you experiment with different means of sharing state between pipeline stages? Which means of sharing state did you use in your pipelines and why? What types of triggers did you use?
+
+- How does the performance of the two pipelines compare in terms of data processing speed, storage usage, and cost?
+
+- What are the pros and cons of each approach, and which one would you recommend for the use case of the project?
+
+- What changes would you make to your pipeline to handle potential instance failures, and make it fault tolerant? 
+
+- Describe the tests that you implemented, and include their results and your conclusions.
+
+- (Optional) How would you handle stragglers in your pipeline?
+
+- What were the main challenges you faced during the development process?
 
 
-### Tasks
+## Implementation Steps
 
-- Draw a high level diagram of your pipeline, showing the different types of functions that you are using with their inputs and outputs being shown clearly. Explain your design decisions, and evaluate it in terms of non-functional requirements (performance, fault-tolerance).
-- Implement a working solution using Azure stateless functions,  for the following use cases.
+- Decide on the different functions that will make up your pipeline.
 
-### Use Cases
-- Static: Store all your data partitions to an Azure Blob and process them to return the result of the query.
-- Dynamic: Write a script that uploads data partitions to an Azure Blob with time intervals, to check if your triggers are working correctly, and the result is updated in an event-driven fashion.
+- Configure the triggers and bindings used by the functions. You can find some of the available trigger options [here](AZURE_FUNCTIONS_MATERIAL.md), as well as in the Azure [documentation](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-blob-input?tabs=in-process%2Cextensionv5&pivots=programming-language-python).
 
-### Requirements
+- Write the code for the functions, which will perform the different data processing tasks (e.g. filtering, partitioning, aggregating data), in the programming language of your preference.
 
+- Test the pipeline locally using the [Azure Functions Core Tools](https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local?tabs=v4%2Clinux%2Ccsharp%2Cportal%2Cbash), to ensure that it is working as expected. 
 
-### Tips
-- Start simple and implement the data processing part stage by stage. You can first use a single function per stage and a small dataset. When you get it working, make it scalable.
+- We recommend using the [Plugin for VS Code](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs-code?tabs=csharp) to create and deploy your Azure Functions applications, which is easy to use and configure. You can also use the Azure Functions CLI ([GitHub](https://github.com/Azure/azure-functions-cli)) and there is a [Plugin for Visual Studio](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs?tabs=in-process) too.
 
+- Once you have tested your functions locally and are satisfied with their behavior, you can deploy them to Azure.
 
-## Draft Report Questions
+- IMPORTANT: After deploying to Azure, don't forget to delete your functions after you have finished your experiments, to avoid consuming extra credits.
 
-Potential Questions:
-- How do different approaches to storing intermediate results, such as using a message queue, a shared database, or a distributed data structure, impact  the overall performance and efficiency of the pipeline?
-- How do different approaches to triggering the functions in the pipeline, such as using a timer trigger or an event trigger, impact the overall performance and efficiency of the pipeline?
-- How do different approaches to scaling the pipeline, such as using autoscaling or manually adjusting the number of functions, impact the overall performance and efficiency of the pipeline?
-- How do different approaches to handling stragglers, such as using retries or timeouts, impact the overall performance and efficiency of the pipeline?
+## Submission and deliverables
 
-## Submission:
 You can submit everything via GitLab.
 First fork this repository, and add all members of your group to a single repository.
 Then, in this group repository, add:
 * Names of all members of your group in a groupMembers.txt file
-* Code that implements the assignment
-* Test scripts that demonstrate the capabilities of your solution
-* A written report giving a brief description of your implementation, and answering the design questions.
+* Code that implements the functions of your pipeline(s).
+* Performance test scripts that you used to evaluate the performance of your pipelines.
+* A written report (3-4 pages) giving a brief description of your implementation, and answering the design questions.
+
+## Example in Python
+
+You can find instructions on how to run and deploy a simple [Azure Functions application](PYTHON_VSCODE_EXAMPLE.md) that counts the lines of CSV files uploaded to a blob storage container. The example is written in Python and uses the VS Code Azure Functions plug-in.
 
 ## Background Reading
 If the topic interests you and you want to read more about the current state of serverless computing as well as some interesting research systems I have upload four papers on Moodle in the background reading folder:
