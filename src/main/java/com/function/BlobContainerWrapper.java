@@ -1,13 +1,18 @@
 package com.function;
 
+import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.util.BinaryData;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
+import com.azure.storage.blob.models.BlobItem;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class BlobContainerWrapper
 {
-   private static final String endpoint = "https://azurefunctiondpstorage.blob.core.windows.net/?sv=2021-06-08&ss=bfqt&srt=sco&sp=rwdlacupiytfx&se=2023-01-29T23:15:19Z&st=2023-01-29T15:15:19Z&spr=https&sig=YvuCCJ%2Fm6g0oaYbIkZYsMihDyBrRpBhzJbndngTVvY0%3D";
+    //TODO: Replace the endpoint
+   private static final String endpoint = "";
     private final BlobContainerClient blobContainerClient;
 
     public BlobContainerWrapper(String containerName) {
@@ -20,6 +25,8 @@ public class BlobContainerWrapper
     public void writeFile(String filename, String content) {
             try {
                 BlobClient blobClient = blobContainerClient.getBlobClient(filename);
+                // Make sure to delete the blob if it exists (we need this when we re-upload the merge result)
+                blobClient.deleteIfExists();
                 blobClient.upload(BinaryData.fromString(content));
             } catch (Exception e) {
                 System.err.println("EXCEPTION: " + e.getMessage());
@@ -37,4 +44,17 @@ public class BlobContainerWrapper
         return binaryData;
     }
 
+    public boolean shouldStartMerging(String filename, int count) {
+        final AtomicInteger curr = new AtomicInteger();
+        blobContainerClient.listBlobs().forEach(blob -> {
+            if (blob.getName().contains(filename)) {
+                curr.addAndGet(1);
+            }
+        });
+        return curr.get() == count;
+    }
+
+    public PagedIterable<BlobItem> getAllBlobs() {
+        return blobContainerClient.listBlobs();
+    }
 }
