@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class BlobContainerWrapper
 {
-    //TODO: Replace the endpoint
+    // TODO: Update the endpoint
    private static final String endpoint = "";
     private final BlobContainerClient blobContainerClient;
 

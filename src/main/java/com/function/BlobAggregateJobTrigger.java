@@ -41,11 +41,11 @@ public class BlobAggregateJobTrigger {
             // Skip the lines until we reach the begin line
             int i = 0;
             for (; i < fileArray.length; i++) {
-                if (fileArray[i] == '\n') {
-                    counter++;
-                }
                 if (counter == begin) {
                     break;
+                }
+                if (fileArray[i] == '\n') {
+                    counter++;
                 }
             }
 
@@ -54,7 +54,7 @@ public class BlobAggregateJobTrigger {
             // Continue to the ones that are in our interest
             StringBuilder temp = new StringBuilder();
             for (; i < fileArray.length; i++) {
-                if (counter >= end) {
+                if (counter > end) {
                     break;
                 }
 
