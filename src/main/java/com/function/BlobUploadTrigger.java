@@ -1,23 +1,11 @@
 package com.function;
 
 import com.microsoft.azure.functions.ExecutionContext;
-import com.microsoft.azure.functions.OutputBinding;
 import com.microsoft.azure.functions.annotation.*;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class BlobUploadTrigger {
 
-    //TODO: upload container initial files
-    // aggregationJobDescription for counting task
-    // aggregationState -
-    // We don't care about which file the results come
-    // finalResult ->
-
-    //TODO: Configure AzureWebJobsStorage as an environment variable in InteliJ of your run configuration
-    // Otherwise it fails :D
     @FunctionName("BlobUploadTrigger")
     @StorageAccount("BlobConnectionString")
     public void run(
@@ -25,11 +13,6 @@ public class BlobUploadTrigger {
                     dataType = "binary",
                     path = "filelists/{name}.{extension}",
                     connection = "AzureWebJobsStorage") byte[] content,
-            @BlobOutput(
-                    name = "target",
-                    path = "aggregationjobs/{name}.json",
-                    connection = "AzureWebJobsStorage")
-            OutputBinding<String> outputItem,
             @BindingName("name") String filename,
             final ExecutionContext context
     ) {
@@ -41,11 +24,11 @@ public class BlobUploadTrigger {
             }
         }
 
-
-        List<JSONObject> list = new ArrayList<>();
+        BlobContainerWrapper blobContainerWrapper = new BlobContainerWrapper("aggregationjobs");
         // Create ranges for aggregates
         // Try out with different number of range lengths
         long rangeLength = n / 10;
+
         for (int i = 0; i < 10; i++) {
             long rangeStart = i * rangeLength;
             long rangeEnd = (i + 1) * rangeLength;
@@ -55,40 +38,16 @@ public class BlobUploadTrigger {
             }
             JSONObject jsonObject = new JSONObject();
 
-            jsonObject.put("target", filename);
+            jsonObject.put("target", filename + ".csv");
             jsonObject.put("rangeStart", rangeStart);
             jsonObject.put("rangeEnd", rangeEnd);
+            jsonObject.put("container", "filelists");
 
-            list.add(jsonObject);
+            blobContainerWrapper.writeFile(filename + "." + i + ".json", jsonObject.toString());
         }
 
-        for (JSONObject obj : list) {
-            context.getLogger().info(obj.toString());
-        }
-
-        outputItem.setValue(list.get(0).toString());
+        context.getLogger().info("Processed file: " + filename);
 
     }
 
 }
-
-/*
- 1. It splits the main file into N subfiles
- 2. For each subfile, we have a different function that processes it.
- 3. n Aggregates that look like {nationKey: acc_bal, ...}
- 4. Merge them
-
-    if (prevState) {
-    merge
-    }
-
-    creatState()
-
-    -> {
-        1: 5300€
-        2: 100€,
-        ...
-    }
-
- **
- */
