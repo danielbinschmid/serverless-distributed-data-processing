@@ -1,23 +1,33 @@
 package com.function;
 
+
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.HttpMethod;
 import com.microsoft.azure.functions.HttpRequestMessage;
 import com.microsoft.azure.functions.HttpResponseMessage;
 import com.microsoft.azure.functions.HttpStatus;
+import com.azure.storage.blob.BlobClient;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.specialized.BlobLeaseClient;
+import com.azure.storage.blob.specialized.BlobLeaseClientBuilder;
 import com.microsoft.azure.functions.annotation.AuthorizationLevel;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.HttpTrigger;
 
 import java.util.Optional;
 
+
+
 /**
  * Azure Functions with HTTP Trigger.
  */
 public class Function {
+
     /**
      * This function listens at endpoint "/api/HttpExample". Two ways to invoke it using "curl" command in bash:
-     * 1. curl -d "HTTP Body" {your host}/api/HttpExample
+     * 1. curl -d "HTTP Body" {your hostq}/api/HttpExample
      * 2. curl "{your host}/api/HttpExample?name=HTTP%20Query"
      */
     @FunctionName("HttpExample")
@@ -30,14 +40,35 @@ public class Function {
             final ExecutionContext context) {
         context.getLogger().info("Java HTTP trigger processed a request.");
 
-        // Parse query parameter
-        final String query = request.getQueryParameters().get("name");
-        final String name = request.getBody().orElse(query);
+           
+        // DefaultAzureCredential defaultCredential = new DefaultAzureCredentialBuilder().build();
+        BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+            .endpoint(Config.BLOB_STORAGE_ACC_ENDPOINT)
+            .sasToken(Config.BLOB_STORAGE_ACC_SAS_TOKEN)
+            .buildClient();
+        
+        BlobContainerClient client = blobServiceClient.getBlobContainerClient("tasks");
+        
+        BlobClient blobClient = client.getBlobClient("a");
+        // String h = "here";
+        // BinaryData data = BinaryData.fromBytes(h.getBytes());
+        // blobClient.upload(data);;
+        BlobLeaseClient leaseClient = new BlobLeaseClientBuilder()
+                        .blobClient(blobClient)
+                        .buildClient();
 
-        if (name == null) {
-            return request.createResponseBuilder(HttpStatus.BAD_REQUEST).body("Please pass a name on the query string or in the request body").build();
-        } else {
-            return request.createResponseBuilder(HttpStatus.OK).body("Hello, " + name).build();
-        }
+        System.out.println("a " + leaseClient.getLeaseId());
+        
+        String leaseID = "none";
+        try {
+            leaseID = leaseClient.acquireLease(20);
+        } catch (Exception e) {
+            leaseID = "blob can not be leased"; 
+        }  
+        
+        System.out.println("obtained lease with id: " + leaseID);
+
+        return request.createResponseBuilder(HttpStatus.OK).body("obtained lease with id: " + leaseID).build();
+
     }
 }
