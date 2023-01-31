@@ -1,6 +1,8 @@
 package com.function;
 
 import com.azure.core.util.BinaryData;
+import com.function.config.Config;
+import com.function.helper.Counter;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.*;
 import org.json.JSONObject;
@@ -11,151 +13,73 @@ import java.util.Map;
 
 public class BlobAggregateJobTrigger {
     @FunctionName("BlobAggregateJobTrigger")
-    @StorageAccount("BlobConnectionString")
     public void run(
             @BlobTrigger(name = "file",
                     dataType = "binary",
-                    path = "aggregationjobs/{name}.{number}.{extension}",
+                    path = Config.AGGREGATION_JOBS_CONTAINER_NAME + "/{name}.{number}.{extension}",
                     connection = "AzureWebJobsStorage") byte[] content,
             @BindingName("name") String filename,
             @BindingName("number") String partitionNumber,
             final ExecutionContext context
     ) {
+        //TODO: Fix strange exception !?
+        /*
+        [2023-01-31T19:00:25.436Z] Trigger Details: MessageId: 68c9c118-5fae-4a12-b1a2-66178a3259c5, DequeueCount: 1, InsertedOn: 2023-01-31T19:00:25.000+00:00, BlobCreated: 2023-01-31T19:00:16.000+00:00, BlobLastModified: 2023-01-31T19:00:16.000+00:00
+        [2023-01-31T19:00:25.733Z] EXCEPTION: Status code 404, "﻿<?xml version="1.0" encoding="utf-8"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.
+        [2023-01-31T19:00:25.733Z] RequestId:b5dd531b-d01e-00a0-2fa6-3565cc000000
+         */
         StringBuilder fileContent = new StringBuilder();
         for (byte b : content) {
             fileContent.append((char) b);
         }
         JSONObject jsonObject = new JSONObject(fileContent.toString());
-        long begin = jsonObject.getLong("rangeStart");
-        long end = jsonObject.getLong("rangeEnd");
+        int begin = jsonObject.getInt(Config.AGGREGATION_JOB_RANGE_START);
+        int end = jsonObject.getInt(Config.AGGREGATION_JOB_RANGE_END);
 
-        BlobContainerWrapper blobContainerWrapper = new BlobContainerWrapper(jsonObject.getString("container"));
-        BinaryData file = blobContainerWrapper.readFile(jsonObject.getString("target"));
+        BlobContainerWrapper blobContainerWrapper = new BlobContainerWrapper(jsonObject.getString(Config.JOB_CONTAINER_PROP));
+        BinaryData file = blobContainerWrapper.readFile(jsonObject.getString(Config.AGGREGATION_JOB_TARGET));
 
 
         if (file == null) {
             context.getLogger().info("Something went wrong! We could not read the file!");
         } else {
-            byte[] fileArray = file.toBytes();
-            long counter = 0;
-            // Skip the lines until we reach the begin line
-            int i = 0;
-            for (; i < fileArray.length; i++) {
-                if (counter == begin) {
-                    break;
-                }
-                if (fileArray[i] == '\n') {
-                    counter++;
-                }
-            }
+            // Count the occurrences and sum the account balance per nation key
+            Map<Integer, Map<String, BigDecimal>> countedResults = Counter.findCountAndSum(file, begin, end);
+            // Extract both of the maps
+            Map<String, BigDecimal> nationKeyToAccountBalanceSum = countedResults.get(Counter.NATION_KEY_TO_ACCOUNT_BALANCE_SUM_MAP);
+            Map<String, BigDecimal> nationKeyToCount = countedResults.get(Counter.NATION_KEY_TO_COUNT_MAP);
 
-            Map<String, BigDecimal> nationKeyToAccountBalanceSum = new HashMap<>();
-            Map<String, BigDecimal> nationKeyToCount = new HashMap<>();
-            // Continue to the ones that are in our interest
-            StringBuilder temp = new StringBuilder();
-            for (; i < fileArray.length; i++) {
-                if (counter > end) {
-                    break;
-                }
-
-                if (fileArray[i] == '\n') {
-                    if (temp.length() != 0) {
-                        try {
-                            countCurrent(nationKeyToAccountBalanceSum, nationKeyToCount, temp.toString());
-                        } catch (Exception e) {
-                            System.err.println(e.getMessage());
-                        }
-                    }
-                    // Insert the current value to our map;
-                    counter++;
-                    temp = new StringBuilder();
-                    continue;
-                }
-
-                temp.append((char) fileArray[i]);
-            }
-
-            if (temp.length() != 0) {
-                try {
-                    countCurrent(nationKeyToAccountBalanceSum, nationKeyToCount, temp.toString());
-                } catch (Exception e) {
-                    System.err.println(e.getMessage());
-                }
-            }
-
-            /*
-
-            {
-               nation key ->
-                "0": {
-                    count: number
-                    sum: number
-                },
-                ...
-            }
-
-             */
+            // Create result map and populate it
             Map<String, Map<String, BigDecimal>> nationKeyToSumAndCount = new HashMap<>();
             nationKeyToAccountBalanceSum.forEach((nationKey, sum) -> {
                 BigDecimal nationKeyCount = nationKeyToCount.get(nationKey);
 
                 Map<String, BigDecimal> nestedMapWithSumAndCount = new HashMap<>();
-                nestedMapWithSumAndCount.put("sum", sum);
-                nestedMapWithSumAndCount.put("count", nationKeyCount);
+                nestedMapWithSumAndCount.put(Config.MERGE_RESULT_SUM, sum);
+                nestedMapWithSumAndCount.put(Config.MERGE_RESULT_COUNT, nationKeyCount);
 
                 nationKeyToSumAndCount.put(nationKey, nestedMapWithSumAndCount);
             });
 
             // We have the values inside a map and we want to write them to another container
-            BlobContainerWrapper resultBlobContainerWrapper = new BlobContainerWrapper("aggregationresults");
+            BlobContainerWrapper resultBlobContainerWrapper = new BlobContainerWrapper(Config.AGGREGATION_RESULTS_CONTAINER_NAME);
             JSONObject result = new JSONObject(nationKeyToSumAndCount);
             resultBlobContainerWrapper.writeFile(filename + "." + partitionNumber + ".result.json", result.toString());
 
-            boolean shouldStartMerging = resultBlobContainerWrapper.shouldStartMerging(filename, 10);
+            boolean shouldStartMerging = resultBlobContainerWrapper.shouldStartMerging(filename, Config.N_PARTITIONS);
 
             // All 10 files have been written and the merging can start
             if (shouldStartMerging) {
                 JSONObject mergeJobJson = new JSONObject();
-                mergeJobJson.put("prefixname", filename);
-                mergeJobJson.put("container", "aggregationresults");
+                mergeJobJson.put(Config.MERGING_JOB_PREFIX, filename);
+                mergeJobJson.put(Config.JOB_CONTAINER_PROP, Config.AGGREGATION_RESULTS_CONTAINER_NAME);
 
-                BlobContainerWrapper mergeJobsContainerWrapper = new BlobContainerWrapper("mergingjobs");
+                BlobContainerWrapper mergeJobsContainerWrapper = new BlobContainerWrapper(Config.MERGING_JOBS_CONTAINER_NAME);
                 mergeJobsContainerWrapper.writeFile(filename + ".json", mergeJobJson.toString());
             }
 
         }
 
-
-    }
-
-    private void countCurrent(Map<String, BigDecimal> values, Map<String, BigDecimal> nationKeyToCount, String line) throws Exception {
-        String[] splitArray = line.split("\\|");
-
-        if (splitArray.length != 8) {
-            throw new Exception("Wrong input");
-        }
-
-        String nationKey = splitArray[3];
-
-        // Count how many entries from this nation there are
-        BigDecimal nationCount = new BigDecimal("0");
-        if (nationKeyToCount.containsKey(nationKey)) {
-            nationCount = nationKeyToCount.get(nationKey);
-        }
-        nationCount = nationCount.add(new BigDecimal("1"));
-
-        nationKeyToCount.put(nationKey, nationCount);
-
-        String accountBalance = splitArray[5];
-
-        BigDecimal curr = new BigDecimal("0.0");
-        if (values.containsKey(nationKey)) {
-            curr = values.get(nationKey);
-        }
-
-        curr = curr.add(new BigDecimal(accountBalance));
-
-        values.put(nationKey, curr);
     }
 
 }

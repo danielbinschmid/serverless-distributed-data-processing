@@ -1,5 +1,7 @@
 package com.function;
 
+import com.function.config.Config;
+import com.function.helper.Partitioner;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.*;
 import org.json.JSONObject;
@@ -7,43 +9,20 @@ import org.json.JSONObject;
 public class BlobUploadTrigger {
 
     @FunctionName("BlobUploadTrigger")
-    @StorageAccount("BlobConnectionString")
     public void run(
             @BlobTrigger(name = "file",
                     dataType = "binary",
-                    path = "filelists/{name}.{extension}",
+                    path = Config.FILE_LIST_CONTAINER_NAME + "/{name}.{extension}",
                     connection = "AzureWebJobsStorage") byte[] content,
             @BindingName("name") String filename,
             final ExecutionContext context
     ) {
-        // Count all lines
-        long n = 0;
-        for (byte b : content) {
-            if (b == '\n') {
-                n++;
-            }
-        }
+        BlobContainerWrapper aggregationJobsContainer = new BlobContainerWrapper(Config.AGGREGATION_JOBS_CONTAINER_NAME);
 
-        BlobContainerWrapper blobContainerWrapper = new BlobContainerWrapper("aggregationjobs");
-        // Create ranges for aggregates
-        // Try out with different number of range lengths
-        long rangeLength = n / 10;
-
-        for (int i = 0; i < 10; i++) {
-            long rangeStart = i * rangeLength;
-            long rangeEnd = (i + 1) * rangeLength;
-
-            if (rangeEnd > n) {
-                rangeEnd = n;
-            }
-            JSONObject jsonObject = new JSONObject();
-
-            jsonObject.put("target", filename + ".csv");
-            jsonObject.put("rangeStart", rangeStart);
-            jsonObject.put("rangeEnd", rangeEnd);
-            jsonObject.put("container", "filelists");
-
-            blobContainerWrapper.writeFile(filename + "." + i + ".json", jsonObject.toString());
+        // Create all of the partitions and write them
+        for (int i = 0; i < Config.N_PARTITIONS; i++) {
+            JSONObject jsonObject = Partitioner.getIthPartition(i, content, filename);
+            aggregationJobsContainer.writeFile(filename + "." + i + ".json", jsonObject.toString());
         }
 
         context.getLogger().info("Processed file: " + filename);

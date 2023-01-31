@@ -6,18 +6,18 @@ import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.blob.models.BlobItem;
+import com.function.config.Config;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class BlobContainerWrapper
 {
-    // TODO: Update the endpoint
-   private static final String endpoint = "";
     private final BlobContainerClient blobContainerClient;
 
     public BlobContainerWrapper(String containerName) {
         this.blobContainerClient = new BlobContainerClientBuilder()
-                .endpoint(endpoint)
+                .endpoint(Config.BLOB_STORAGE_ACC_ENDPOINT)
+                .sasToken(Config.BLOB_STORAGE_ACC_SAS_TOKEN)
                 .containerName(containerName)
                 .buildClient();
     }
