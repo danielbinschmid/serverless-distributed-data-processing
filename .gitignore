@@ -37,3 +37,13 @@ hs_err_pid*
 local.settings.json
 bin/
 obj/
+
+# config file
+src/main/java/com/function/config/AccountConfig.java
+
+# tpch
+tpch-dbgen/
+
+# testing data
+testing_data/
+

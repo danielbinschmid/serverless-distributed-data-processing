@@ -1,4 +1,4 @@
-package com.function;
+package com.function.config;
 
 public class Config {
     // ----------------------- Storage account access configuration strings. --------------------------

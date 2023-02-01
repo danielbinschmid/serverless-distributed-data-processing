@@ -26,6 +26,8 @@ import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
 import java.time.Duration;
 
+import com.function.config.Config;
+
 
 /**
  * Merges result of a file into the total set of results.
@@ -36,7 +38,7 @@ import java.time.Duration;
  * 4. upload new result content to result blob and result blob copy
  * 5. release result blob
  */
-public class Merger {
+public class QueueMerger {
     private Map<String, Pair<Double, Long>> nationToSumCount;
     
     @FunctionName("merger")

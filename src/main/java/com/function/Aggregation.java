@@ -20,6 +20,7 @@ import com.microsoft.azure.functions.OutputBinding;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueOutput;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
+import com.function.config.Config;
 
 
 
