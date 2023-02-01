@@ -15,10 +15,8 @@ import com.azure.storage.blob.specialized.BlobLeaseClientBuilder;
 import com.microsoft.azure.functions.annotation.AuthorizationLevel;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.HttpTrigger;
-import com.function.config.Config;
-
+import com.function.config.AccountConfig;
 import java.util.Optional;
-
 
 
 /**
@@ -44,8 +42,8 @@ public class Function {
            
         // DefaultAzureCredential defaultCredential = new DefaultAzureCredentialBuilder().build();
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
-            .endpoint(Config.BLOB_STORAGE_ACC_ENDPOINT)
-            .sasToken(Config.BLOB_STORAGE_ACC_SAS_TOKEN)
+            .endpoint(AccountConfig.BLOB_STORAGE_ACC_ENDPOINT)
+            .sasToken(AccountConfig.BLOB_STORAGE_ACC_SAS_TOKEN)
             .buildClient();
         
         BlobContainerClient client = blobServiceClient.getBlobContainerClient("tasks");

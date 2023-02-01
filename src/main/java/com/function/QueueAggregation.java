@@ -23,11 +23,10 @@ import com.microsoft.azure.functions.annotation.QueueTrigger;
 import com.function.config.Config;
 
 
-
 /**
  * Aggregates results from the partitioned tasks of a file input.
  */
-public class Aggregation {
+public class QueueAggregation {
     private static final int maxQueueMsgs = 2;
     private static final long waitTime = 500;
 

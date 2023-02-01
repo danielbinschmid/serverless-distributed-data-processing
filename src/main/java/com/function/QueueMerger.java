@@ -27,6 +27,7 @@ import com.microsoft.azure.functions.annotation.QueueTrigger;
 import java.time.Duration;
 
 import com.function.config.Config;
+import com.function.config.AccountConfig;
 
 
 /**
@@ -51,11 +52,12 @@ public class QueueMerger {
 
         // 1. Lease result blob
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
-                            .endpoint(Config.BLOB_STORAGE_ACC_ENDPOINT)
-                            .sasToken(Config.BLOB_STORAGE_ACC_SAS_TOKEN)
+                            .endpoint(AccountConfig.BLOB_STORAGE_ACC_ENDPOINT)
+                            .sasToken(AccountConfig.BLOB_STORAGE_ACC_SAS_TOKEN)
                             .buildClient();
         BlobContainerClient client = blobServiceClient.getBlobContainerClient(Config.RESULTS_BLOB_CONTAINER);
         BlobClient blobClient = client.getBlobClient(Config.FINAL_RESULTS_STATE_BLOB_NAME);
+
         // create results blob if it does not exist.
         if (!blobClient.exists()) {
             JSONObject state = new JSONObject()
@@ -63,6 +65,7 @@ public class QueueMerger {
             BlobContainerWrapper resultBlobContainerWrapper = new BlobContainerWrapper(Config.RESULTS_BLOB_CONTAINER);
             resultBlobContainerWrapper.writeFile(Config.FINAL_RESULTS_STATE_BLOB_NAME, state.toString());
         }
+
         // lease existing or freshly created result blob
         BlobLeaseClient leaseClient = new BlobLeaseClientBuilder()
                         .blobClient(blobClient)
