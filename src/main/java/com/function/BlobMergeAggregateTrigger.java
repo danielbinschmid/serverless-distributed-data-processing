@@ -2,7 +2,7 @@ package com.function;
 
 import com.azure.core.util.BinaryData;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.function.config.Config;
+import com.function.config.AccountConfig;
 import com.function.helper.Merger;
 import com.microsoft.azure.functions.annotation.BlobTrigger;
 import com.microsoft.azure.functions.annotation.FunctionName;
@@ -18,7 +18,7 @@ public class BlobMergeAggregateTrigger {
             @BlobTrigger(name = "file",
                     dataType = "binary",
                     // customer.00.1.result.json
-                    path = Config.MERGING_JOBS_CONTAINER_NAME + "/{prefixname}.{ext}",
+                    path = AccountConfig.MERGING_JOBS_CONTAINER_NAME + "/{prefixname}.{ext}",
                     connection = "AzureWebJobsStorage") byte[] content
     ) {
         StringBuilder fileContent = new StringBuilder();
@@ -27,8 +27,8 @@ public class BlobMergeAggregateTrigger {
         }
         JSONObject jsonObject = new JSONObject(fileContent.toString());
 
-        String filename = jsonObject.getString(Config.MERGING_JOB_PREFIX);
-        String container = jsonObject.getString(Config.JOB_CONTAINER_PROP);
+        String filename = jsonObject.getString(AccountConfig.MERGING_JOB_PREFIX);
+        String container = jsonObject.getString(AccountConfig.JOB_CONTAINER_PROP);
 
         if (filename == null || container == null) {
             System.err.println("Something went wrong. The job file couldn't be parsed.");
@@ -54,14 +54,14 @@ public class BlobMergeAggregateTrigger {
 
 
         // We should be ready and everything should be merged
-        BlobContainerWrapper writeContainer = new BlobContainerWrapper(Config.MERGE_RESULT_CONTAINER_NAME);
+        BlobContainerWrapper writeContainer = new BlobContainerWrapper(AccountConfig.MERGE_RESULT_CONTAINER_NAME);
         // Check if there is a result already. If that's the case merge the results.
-        BinaryData mergeResultBinary = writeContainer.readFile(Config.MERGE_RESULT_FILENAME);
+        BinaryData mergeResultBinary = writeContainer.readFile(AccountConfig.MERGE_RESULT_FILENAME);
 
         if (mergeResultBinary == null) {
             // If that's the first result, just dump the data
             JSONObject result = new JSONObject(nationKeyToSumAndCount);
-            writeContainer.writeFile(Config.MERGE_RESULT_FILENAME, result.toString());
+            writeContainer.writeFile(AccountConfig.MERGE_RESULT_FILENAME, result.toString());
         } else {
             // We need to merge otherwise ^_^
             try {
@@ -69,7 +69,7 @@ public class BlobMergeAggregateTrigger {
 
                 // We are done, so simply overwrite the file
                 JSONObject result = new JSONObject(nationKeyToSumAndCount);
-                writeContainer.writeFile(Config.MERGE_RESULT_FILENAME, result.toString());
+                writeContainer.writeFile(AccountConfig.MERGE_RESULT_FILENAME, result.toString());
             } catch (Exception e) {
                 System.err.println("Something went wrong during the reading of the merge-result and the task execution");
             }

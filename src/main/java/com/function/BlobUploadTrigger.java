@@ -1,6 +1,6 @@
 package com.function;
 
-import com.function.config.Config;
+import com.function.config.AccountConfig;
 import com.function.helper.Partitioner;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.*;
@@ -12,17 +12,21 @@ public class BlobUploadTrigger {
     public void run(
             @BlobTrigger(name = "file",
                     dataType = "binary",
-                    path = Config.FILE_LIST_CONTAINER_NAME + "/{name}",
+                    path = AccountConfig.FILE_LIST_CONTAINER_NAME + "/{name}",
                     connection = "AzureWebJobsStorage") byte[] content,
             @BindingName("name") String filename,
             final ExecutionContext context
     ) {
-        BlobContainerWrapper aggregationJobsContainer = new BlobContainerWrapper(Config.AGGREGATION_JOBS_CONTAINER_NAME);
+        if (AccountConfig.DISABLE_BLOB_UPLOAD_TRIGGER) {
+            return;
+        }
+
+        BlobContainerWrapper aggregationJobsContainer = new BlobContainerWrapper(AccountConfig.AGGREGATION_JOBS_CONTAINER_NAME);
 
         // Create all of the partitions and write them
-        for (int i = 0; i < Config.N_PARTITIONS; i++) {
+        for (int i = 0; i < AccountConfig.N_PARTITIONS; i++) {
             JSONObject jsonObject = Partitioner.getIthPartition(i, content, filename);
-            jsonObject.put(Config.JOB_CONTAINER_PROP, Config.FILE_LIST_CONTAINER_NAME);
+            jsonObject.put(AccountConfig.JOB_CONTAINER_PROP, AccountConfig.FILE_LIST_CONTAINER_NAME);
             aggregationJobsContainer.writeFile(filename + "." + i + ".json", jsonObject.toString());
         }
 
