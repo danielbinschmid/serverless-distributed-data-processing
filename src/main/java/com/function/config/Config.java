@@ -24,6 +24,10 @@ public class Config {
     // Queue to append parallelized tasks
     public static final String TASKS_QUEUE_NAME = "tasksqueue";
 
+    public final static String AGGREGATION_ID = "aggregationID";
+    public final static String TYPE_OF_CONTENT = "type";
+    public final static String NEW_COUNT_RESULT = "result";
+
     // ------------------------------------------------------------------------------------------------
 
     // -------------------------------- Azure blob container names ------------------------------------
@@ -78,9 +82,12 @@ public class Config {
     public static final String MERGE_RESULT_COUNT = "count";
     // ------------------------------------------------------------------------------------------------
 
-    // -------------------------------- Number of total partitions ------------------------------------
+    // -------------------------------- Partitions ------------------------------------
     // TODO: Experiment with different number of partitions
     public static final int N_PARTITIONS = 10;
+
+    public static final String FIRST_PARTITION = "firstPartition";
+    public static final String LAST_PARTITION = "lastPartition";
     // ------------------------------------------------------------------------------------------------
     
 }

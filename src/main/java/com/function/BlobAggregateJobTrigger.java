@@ -22,16 +22,11 @@ public class BlobAggregateJobTrigger {
             @BindingName("number") String partitionNumber,
             final ExecutionContext context
     ) {
-        //TODO: Fix strange exception !?
-        /*
-        [2023-01-31T19:00:25.436Z] Trigger Details: MessageId: 68c9c118-5fae-4a12-b1a2-66178a3259c5, DequeueCount: 1, InsertedOn: 2023-01-31T19:00:25.000+00:00, BlobCreated: 2023-01-31T19:00:16.000+00:00, BlobLastModified: 2023-01-31T19:00:16.000+00:00
-        [2023-01-31T19:00:25.733Z] EXCEPTION: Status code 404, "﻿<?xml version="1.0" encoding="utf-8"?><Error><Code>BlobNotFound</Code><Message>The specified blob does not exist.
-        [2023-01-31T19:00:25.733Z] RequestId:b5dd531b-d01e-00a0-2fa6-3565cc000000
-         */
         StringBuilder fileContent = new StringBuilder();
         for (byte b : content) {
             fileContent.append((char) b);
         }
+
         JSONObject jsonObject = new JSONObject(fileContent.toString());
         int begin = jsonObject.getInt(Config.AGGREGATION_JOB_RANGE_START);
         int end = jsonObject.getInt(Config.AGGREGATION_JOB_RANGE_END);
@@ -39,12 +34,10 @@ public class BlobAggregateJobTrigger {
         BlobContainerWrapper blobContainerWrapper = new BlobContainerWrapper(jsonObject.getString(Config.JOB_CONTAINER_PROP));
         BinaryData file = blobContainerWrapper.readFile(jsonObject.getString(Config.AGGREGATION_JOB_TARGET));
 
-
-        if (file == null) {
-            context.getLogger().info("Something went wrong! We could not read the file!");
-        } else {
+        if (file != null) {
             // Count the occurrences and sum the account balance per nation key
-            Map<Integer, Map<String, BigDecimal>> countedResults = Counter.findCountAndSumBlob(file, begin, end);
+            Map<String, Map<String, BigDecimal>> countedResults = Counter.findCountAndSum(file, begin, end);
+
             // Extract both of the maps
             Map<String, BigDecimal> nationKeyToAccountBalanceSum = countedResults.get(Counter.NATION_KEY_TO_ACCOUNT_BALANCE_SUM_MAP);
             Map<String, BigDecimal> nationKeyToCount = countedResults.get(Counter.NATION_KEY_TO_COUNT_MAP);
@@ -77,7 +70,8 @@ public class BlobAggregateJobTrigger {
                 BlobContainerWrapper mergeJobsContainerWrapper = new BlobContainerWrapper(Config.MERGING_JOBS_CONTAINER_NAME);
                 mergeJobsContainerWrapper.writeFile(filename + ".json", mergeJobJson.toString());
             }
-
+        } else {
+            context.getLogger().info("Something went wrong! We could not read the file!");
         }
 
     }

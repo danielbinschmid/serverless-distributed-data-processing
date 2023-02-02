@@ -14,7 +14,10 @@ import com.microsoft.azure.functions.annotation.BindingName;
 import com.microsoft.azure.functions.annotation.BlobTrigger;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueOutput;
+
 import com.function.config.Config;
+import com.function.config.AccountConfig;
+import com.function.helper.Partitioner;
 
 
 /**
@@ -28,8 +31,7 @@ import com.function.config.Config;
  * 5. Terminate.
  */
 public class ReceiverQueuePipeline {
-    
-    @FunctionName("receiver")
+    @FunctionName("ReciverQueuePipeline")
         public void run(
         @BlobTrigger(name = "file",
                     dataType = "binary",
@@ -43,47 +45,36 @@ public class ReceiverQueuePipeline {
         ) {
             // queue for issuing tasks            
             QueueClient tasksQueue = new QueueClientBuilder()
-                                    .connectionString(Config.CONNECTION_STRING)
+                                    .connectionString(AccountConfig.CONNECTION_STRING)
                                     .queueName(Config.TASKS_QUEUE_NAME)
                                     .buildClient();
 
             // create queue to enqueue aggregationresults into
             String resultClientName = "result" + java.util.UUID.randomUUID();
             QueueClient aggregationResultClient = new QueueClientBuilder()
-                                .connectionString(Config.CONNECTION_STRING)
+                                .connectionString(AccountConfig.CONNECTION_STRING)
                                 .queueName(resultClientName)
                                 .buildClient();
-            try { aggregationResultClient.create(); }
-            catch (QueueStorageException e) { context.getLogger().info("Error code: " + e.getErrorCode() + "Message: " + e.getMessage()); }
+            
+            try { 
+                aggregationResultClient.create(); 
+            } catch (QueueStorageException e) {
+                context.getLogger().info("Error code: " + e.getErrorCode() + "Message: " + e.getMessage()); 
+            }
 
-            // range length and number of lines of file
-            double n = 0.0;
-            for (byte b : content) { if (b == '\n') n++; }
-            double rangeLength = n / 10.0;
-
-            for (int i = 0; i < 10; i++) {
-                // compute range end and range start.
-                long rangeStart = (long) Math.floor(i * rangeLength);
-                long rangeEnd = (long) Math.floor((i + 1) * rangeLength);
-                if (rangeEnd > n) rangeEnd =(long) n;
-                if (i == 9 && rangeEnd < n - 1) rangeEnd = (long) n - 1;
-                
-                // issue task to tasks-queue
-                JSONObject jsonObject = new JSONObject()
-                                .put("target", filename)
-                                .put("rangeStart", rangeStart)
-                                .put("rangeEnd", rangeEnd)
-                                .put("resultqueueName", resultClientName)
-                                .put("aggregationID", i)
-                                .put("container", Config.TASKS_BLOB_CONTAINER); 
+            for (int i = 0; i < Config.N_PARTITIONS; i++) {
+                JSONObject jsonObject = Partitioner.getIthPartition(i, content, filename);
+                jsonObject.put(Config.JOB_CONTAINER_PROP, Config.TASKS_BLOB_CONTAINER);
+                jsonObject.put(Config.RESULTS_QUEUE_NAME, resultClientName);
+                jsonObject.put(Config.AGGREGATION_ID, i);
                 tasksQueue.sendMessage(Base64.getEncoder().encodeToString(jsonObject.toString().getBytes()));
             }
 
             // issue aggregation task
             JSONObject aggregationTask = new JSONObject()
-                                .put("firstPartition", 0l)
-                                .put("lastPartition", 9l)
-                                .put("resultqueue", resultClientName);
+                                .put(Config.FIRST_PARTITION, 0)
+                                .put(Config.LAST_PARTITION, 9)
+                                .put(Config.RESULTS_QUEUE_NAME, resultClientName);
             message.setValue(aggregationTask.toString());
         }
 }

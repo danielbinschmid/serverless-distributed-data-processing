@@ -44,11 +44,9 @@ public class Partitioner {
 
     private static JSONObject buildJSON(String filename, int rangeStart, int rangeEnd) {
         JSONObject jsonObject = new JSONObject();
-
-        jsonObject.put(Config.AGGREGATION_JOB_TARGET, filename + ".csv");
+        jsonObject.put(Config.AGGREGATION_JOB_TARGET, filename);
         jsonObject.put(Config.AGGREGATION_JOB_RANGE_START, rangeStart);
         jsonObject.put(Config.AGGREGATION_JOB_RANGE_END, rangeEnd);
-        jsonObject.put(Config.JOB_CONTAINER_PROP, Config.FILE_LIST_CONTAINER_NAME);
 
         return jsonObject;
     }
