@@ -1,8 +1,7 @@
-package com.function.helper;
+package com.function.pipelines.helper;
 
 import com.azure.core.util.BinaryData;
 
-import org.javatuples.Pair;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;

@@ -1,4 +1,4 @@
-package com.function;
+package com.function.pipelines.blob;
 
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.util.BinaryData;

@@ -1,13 +1,13 @@
-package com.function.helper;
+package com.function.pipelines.helper;
 
-import com.function.config.AccountConfig;
+import com.function.config.PipelineConfig;
 import org.json.JSONObject;
 
 public class Partitioner {
 
     public static JSONObject getIthPartition(int index, byte[] content, String filename) {
         // Find range length for n partitions
-        int rangeLength = content.length / AccountConfig.N_PARTITIONS;
+        int rangeLength = content.length / PipelineConfig.N_PARTITIONS;
 
         // If it is the first partition, only find the range end
         if (index == 0) {
@@ -16,7 +16,7 @@ public class Partitioner {
             return buildJSON(filename, index, rangeEnd);
         }
         // If it is the last partition
-        if (index == AccountConfig.N_PARTITIONS - 1) {
+        if (index == PipelineConfig.N_PARTITIONS - 1) {
             // The last partition starts and i * range length
             int rangeStart = getIndexOfNextLineFrom(index*rangeLength, content);
             // and ends at the end of the file
@@ -44,9 +44,9 @@ public class Partitioner {
 
     private static JSONObject buildJSON(String filename, int rangeStart, int rangeEnd) {
         JSONObject jsonObject = new JSONObject();
-        jsonObject.put(AccountConfig.AGGREGATION_JOB_TARGET, filename);
-        jsonObject.put(AccountConfig.AGGREGATION_JOB_RANGE_START, rangeStart);
-        jsonObject.put(AccountConfig.AGGREGATION_JOB_RANGE_END, rangeEnd);
+        jsonObject.put(PipelineConfig.AGGREGATION_JOB_TARGET, filename);
+        jsonObject.put(PipelineConfig.AGGREGATION_JOB_RANGE_START, rangeStart);
+        jsonObject.put(PipelineConfig.AGGREGATION_JOB_RANGE_END, rangeEnd);
 
         return jsonObject;
     }

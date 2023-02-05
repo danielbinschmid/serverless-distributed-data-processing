@@ -1,11 +1,11 @@
-package com.function;
+package com.function.pipelines.blob;
 
 import java.math.BigDecimal;
 import java.util.*;
 
 import com.azure.core.util.BinaryData;
-import com.function.config.AccountConfig;
-import com.function.helper.Merger;
+import com.function.config.BlobPipelineConfig;
+import com.function.pipelines.helper.Merger;
 import com.microsoft.azure.functions.annotation.*;
 import com.microsoft.azure.functions.*;
 
@@ -24,8 +24,8 @@ public class DisplayMergeResult {
             final ExecutionContext context) {
         context.getLogger().info("Java HTTP trigger processed a request.");
 
-        BlobContainerWrapper mergeContainer = new BlobContainerWrapper(AccountConfig.MERGE_RESULT_CONTAINER_NAME);
-        BinaryData resultBinaryData = mergeContainer.readFile(AccountConfig.MERGE_RESULT_FILENAME);
+        BlobContainerWrapper mergeContainer = new BlobContainerWrapper(BlobPipelineConfig.MERGE_RESULT_CONTAINER_NAME);
+        BinaryData resultBinaryData = mergeContainer.readFile(BlobPipelineConfig.MERGE_RESULT_FILENAME);
         if (resultBinaryData == null) {
             return request.createResponseBuilder(HttpStatus.BAD_REQUEST).body("There is no result yet").build();
         }

@@ -31,15 +31,14 @@ hs_err_pid*
 
 # macOS
 .DS_Store
-.vscode/
 
 # Azure Functions
 local.settings.json
 bin/
 obj/
 
-# config file
-src/main/java/com/function/config/AccountConfig.java
+
+
 
 # tpch
 tpch-dbgen/
@@ -47,3 +46,7 @@ tpch-dbgen/
 # testing data
 testing_data/
 
+
+no_push/
+.vscode/
+.apt_*

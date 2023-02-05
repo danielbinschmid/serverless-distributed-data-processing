@@ -1,4 +1,4 @@
-package com.function;
+package com.function.pipelines.queue;
 
 
 import java.util.Base64;
@@ -15,8 +15,11 @@ import com.microsoft.azure.functions.annotation.BlobTrigger;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueOutput;
 
+
+import com.function.config.QueuePipelineConfig;
+import com.function.config.PipelineConfig;
+import com.function.pipelines.helper.Partitioner;
 import com.function.config.AccountConfig;
-import com.function.helper.Partitioner;
 
 
 /**
@@ -34,18 +37,18 @@ public class ReceiverQueuePipeline {
         public void run(
         @BlobTrigger(name = "file",
                     dataType = "binary",
-                    path = AccountConfig.TASKS_BLOB_CONTAINER + "/{name}",
+                    path = QueuePipelineConfig.TASKS_BLOB_CONTAINER + "/{name}",
                     connection = "AzureWebJobsStorage") byte[] content,
         @BindingName("name") String filename,
         @QueueOutput(name= "out",
-                    queueName = AccountConfig.AGGREGATION_QUEUE_NAME,
+                    queueName = QueuePipelineConfig.AGGREGATION_QUEUE_NAME,
                     connection = "AzureWebJobsStorage") OutputBinding<String> message,
         final ExecutionContext context
         ) {
             // queue for issuing tasks            
             QueueClient tasksQueue = new QueueClientBuilder()
                                     .connectionString(AccountConfig.CONNECTION_STRING)
-                                    .queueName(AccountConfig.TASKS_QUEUE_NAME)
+                                    .queueName(QueuePipelineConfig.TASKS_QUEUE_NAME)
                                     .buildClient();
 
             // create queue to enqueue aggregationresults into
@@ -61,19 +64,19 @@ public class ReceiverQueuePipeline {
                 context.getLogger().info("Error code: " + e.getErrorCode() + "Message: " + e.getMessage()); 
             }
 
-            for (int i = 0; i < AccountConfig.N_PARTITIONS; i++) {
+            for (int i = 0; i < PipelineConfig.N_PARTITIONS; i++) {
                 JSONObject jsonObject = Partitioner.getIthPartition(i, content, filename);
-                jsonObject.put(AccountConfig.JOB_CONTAINER_PROP, AccountConfig.TASKS_BLOB_CONTAINER);
-                jsonObject.put(AccountConfig.RESULTS_QUEUE_NAME, resultClientName);
-                jsonObject.put(AccountConfig.AGGREGATION_ID, i);
+                jsonObject.put(PipelineConfig.JOB_CONTAINER_PROP, QueuePipelineConfig.TASKS_BLOB_CONTAINER);
+                jsonObject.put(QueuePipelineConfig.RESULTS_QUEUE_NAME, resultClientName);
+                jsonObject.put(PipelineConfig.AGGREGATION_ID, i);
                 tasksQueue.sendMessage(Base64.getEncoder().encodeToString(jsonObject.toString().getBytes()));
             }
 
             // issue aggregation task
             JSONObject aggregationTask = new JSONObject()
-                                .put(AccountConfig.FIRST_PARTITION, 0)
-                                .put(AccountConfig.LAST_PARTITION, 9)
-                                .put(AccountConfig.RESULTS_QUEUE_NAME, resultClientName);
+                                .put(QueuePipelineConfig.FIRST_PARTITION, 0)
+                                .put(QueuePipelineConfig.LAST_PARTITION, 9)
+                                .put(QueuePipelineConfig.RESULTS_QUEUE_NAME, resultClientName);
             message.setValue(aggregationTask.toString());
         }
 }

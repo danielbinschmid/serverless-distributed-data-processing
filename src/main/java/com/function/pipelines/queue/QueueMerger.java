@@ -1,4 +1,4 @@
-package com.function;
+package com.function.pipelines.queue;
 
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
@@ -13,7 +13,7 @@ import com.azure.storage.blob.specialized.BlobLeaseClientBuilder;
 import java.util.HashMap;
 import java.util.Map;
 
-
+import com.function.config.QueuePipelineConfig;
 import org.json.JSONObject;
 
 import com.azure.core.util.BinaryData;
@@ -26,8 +26,9 @@ import com.microsoft.azure.functions.annotation.QueueTrigger;
 import java.math.BigDecimal;
 import java.time.Duration;
 
+import com.function.config.PipelineConfig;
+import com.function.pipelines.blob.BlobContainerWrapper;
 import com.function.config.AccountConfig;
-
 
 /**
  * Merges result of a file into the total set of results.
@@ -44,7 +45,7 @@ public class QueueMerger {
     @FunctionName("QueueMerger")
     public void run(
             @QueueTrigger(name = "msg",
-            queueName = AccountConfig.RESULTS_QUEUE_NAME,
+            queueName = QueuePipelineConfig.RESULTS_QUEUE_NAME,
             connection = "AzureWebJobsStorage") String message,
             final ExecutionContext context) {
         nationToSumCount = new HashMap<>();
@@ -54,15 +55,15 @@ public class QueueMerger {
                             .endpoint(AccountConfig.BLOB_STORAGE_ACC_ENDPOINT)
                             .sasToken(AccountConfig.BLOB_STORAGE_ACC_SAS_TOKEN)
                             .buildClient();
-        BlobContainerClient client = blobServiceClient.getBlobContainerClient(AccountConfig.RESULTS_BLOB_CONTAINER);
-        BlobClient blobClient = client.getBlobClient(AccountConfig.FINAL_RESULTS_STATE_BLOB_NAME);
+        BlobContainerClient client = blobServiceClient.getBlobContainerClient(QueuePipelineConfig.RESULTS_BLOB_CONTAINER);
+        BlobClient blobClient = client.getBlobClient(QueuePipelineConfig.FINAL_RESULTS_STATE_BLOB_NAME);
 
         // create results blob if it does not exist.
         if (!blobClient.exists()) {
             JSONObject state = new JSONObject()
-                            .put(AccountConfig.NEW_COUNT_RESULT, new JSONObject());
-            BlobContainerWrapper resultBlobContainerWrapper = new BlobContainerWrapper(AccountConfig.RESULTS_BLOB_CONTAINER);
-            resultBlobContainerWrapper.writeFile(AccountConfig.FINAL_RESULTS_STATE_BLOB_NAME, state.toString());
+                            .put(QueuePipelineConfig.NEW_COUNT_RESULT, new JSONObject());
+            BlobContainerWrapper resultBlobContainerWrapper = new BlobContainerWrapper(QueuePipelineConfig.RESULTS_BLOB_CONTAINER);
+            resultBlobContainerWrapper.writeFile(QueuePipelineConfig.FINAL_RESULTS_STATE_BLOB_NAME, state.toString());
         }
 
         // lease existing or freshly created result blob
@@ -72,45 +73,45 @@ public class QueueMerger {
         String leaseID = acquireLease(leaseClient, context);
         
         // 2. load state
-        BlobContainerWrapper resultBlobContainerWrapper = new BlobContainerWrapper(AccountConfig.RESULTS_BLOB_CONTAINER);
-        BinaryData currentStateBinary = resultBlobContainerWrapper.readFile(AccountConfig.FINAL_RESULTS_STATE_BLOB_NAME);
-        JSONObject currentStateJSON = new JSONObject(currentStateBinary.toString()).getJSONObject(AccountConfig.NEW_COUNT_RESULT);
+        BlobContainerWrapper resultBlobContainerWrapper = new BlobContainerWrapper(QueuePipelineConfig.RESULTS_BLOB_CONTAINER);
+        BinaryData currentStateBinary = resultBlobContainerWrapper.readFile(QueuePipelineConfig.FINAL_RESULTS_STATE_BLOB_NAME);
+        JSONObject currentStateJSON = new JSONObject(currentStateBinary.toString()).getJSONObject(QueuePipelineConfig.NEW_COUNT_RESULT);
         
         for(String countryKey: currentStateJSON.keySet()) {    
             JSONObject countryData = currentStateJSON.getJSONObject(countryKey);
-            BigDecimal countrySum = countryData.getBigDecimal(AccountConfig.MERGE_RESULT_SUM);
-            BigDecimal countryCount = countryData.getBigDecimal(AccountConfig.MERGE_RESULT_COUNT);
+            BigDecimal countrySum = countryData.getBigDecimal(PipelineConfig.MERGE_RESULT_SUM);
+            BigDecimal countryCount = countryData.getBigDecimal(PipelineConfig.MERGE_RESULT_COUNT);
             
             Map<String, BigDecimal> nestedMapwithSumAndCount = new HashMap<>();
-            nestedMapwithSumAndCount.put(AccountConfig.MERGE_RESULT_SUM, countrySum);
-            nestedMapwithSumAndCount.put(AccountConfig.MERGE_RESULT_COUNT, countryCount);
+            nestedMapwithSumAndCount.put(PipelineConfig.MERGE_RESULT_SUM, countrySum);
+            nestedMapwithSumAndCount.put(PipelineConfig.MERGE_RESULT_COUNT, countryCount);
             nationToSumCount.put(countryKey, nestedMapwithSumAndCount);
         }
 
         // 3. update state
         JSONObject msgData = new JSONObject(message);
-        JSONObject newCounts = msgData.getJSONObject(AccountConfig.NEW_COUNT_RESULT);
+        JSONObject newCounts = msgData.getJSONObject(QueuePipelineConfig.NEW_COUNT_RESULT);
 
         for(String nationKey: newCounts.keySet()) {
             JSONObject nationData = newCounts.getJSONObject(nationKey);
-            BigDecimal newNationSum = nationData.getBigDecimal(AccountConfig.MERGE_RESULT_SUM);
-            BigDecimal newNationCount = nationData.getBigDecimal(AccountConfig.MERGE_RESULT_COUNT);
+            BigDecimal newNationSum = nationData.getBigDecimal(PipelineConfig.MERGE_RESULT_SUM);
+            BigDecimal newNationCount = nationData.getBigDecimal(PipelineConfig.MERGE_RESULT_COUNT);
             
             if (nationToSumCount.containsKey(nationKey)) {
-                BigDecimal currentSum = nationToSumCount.get(nationKey).get(AccountConfig.MERGE_RESULT_SUM);
-                BigDecimal currentCount = nationToSumCount.get(nationKey).get(AccountConfig.MERGE_RESULT_COUNT);
+                BigDecimal currentSum = nationToSumCount.get(nationKey).get(PipelineConfig.MERGE_RESULT_SUM);
+                BigDecimal currentCount = nationToSumCount.get(nationKey).get(PipelineConfig.MERGE_RESULT_COUNT);
                 newNationSum = newNationSum.add(currentSum);
                 newNationCount = newNationCount.add(currentCount);
             } 
             Map<String, BigDecimal> nestedMapwithSumAndCount = new HashMap<>();
-            nestedMapwithSumAndCount.put(AccountConfig.MERGE_RESULT_SUM, newNationSum);
-            nestedMapwithSumAndCount.put(AccountConfig.MERGE_RESULT_COUNT, newNationCount);
+            nestedMapwithSumAndCount.put(PipelineConfig.MERGE_RESULT_SUM, newNationSum);
+            nestedMapwithSumAndCount.put(PipelineConfig.MERGE_RESULT_COUNT, newNationCount);
             nationToSumCount.put(nationKey, nestedMapwithSumAndCount);
         }
 
         // 4. upload
         JSONObject newState = new JSONObject()
-                            .put(AccountConfig.NEW_COUNT_RESULT, nationToSumCount);
+                            .put(QueuePipelineConfig.NEW_COUNT_RESULT, nationToSumCount);
         
         try {   
             // update state of result blob
@@ -121,19 +122,19 @@ public class QueueMerger {
             blobClient.uploadWithResponse(opts, Duration.ofMillis(500), Context.NONE);
             
             // compute averages and upload to output result blob
-            BlobContainerWrapper resultCopy = new BlobContainerWrapper(AccountConfig.RESULTS_BLOB_CONTAINER);
+            BlobContainerWrapper resultCopy = new BlobContainerWrapper(QueuePipelineConfig.RESULTS_BLOB_CONTAINER);
             Map<String, BigDecimal> nationBalanceAverage = new HashMap<>();
 
             nationToSumCount.forEach( (nationKey, sumAndCountMap) -> {
-                    BigDecimal nationSum = sumAndCountMap.get(AccountConfig.MERGE_RESULT_SUM);
-                    BigDecimal nationCount = sumAndCountMap.get(AccountConfig.MERGE_RESULT_COUNT);
+                    BigDecimal nationSum = sumAndCountMap.get(PipelineConfig.MERGE_RESULT_SUM);
+                    BigDecimal nationCount = sumAndCountMap.get(PipelineConfig.MERGE_RESULT_COUNT);
                     BigDecimal nationAverage = nationSum.divide(nationCount);
                     nationBalanceAverage.put(nationKey, nationAverage);
                 }
             );
 
             JSONObject nationBalanceAverageResult = new JSONObject(nationBalanceAverage);
-            resultCopy.writeFile(AccountConfig.FINAL_RESULTS_OUTPUT_BLOB_NAME, nationBalanceAverageResult.toString());
+            resultCopy.writeFile(QueuePipelineConfig.FINAL_RESULTS_OUTPUT_BLOB_NAME, nationBalanceAverageResult.toString());
 
             leaseClient.releaseLease();
 

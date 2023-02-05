@@ -1,4 +1,4 @@
-package com.function;
+package com.function.pipelines.queue;
 
 
 import com.azure.storage.queue.QueueClient;
@@ -20,8 +20,10 @@ import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueOutput;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
 
+import com.function.config.QueuePipelineConfig;
+import com.function.config.PipelineConfig;
+import com.function.pipelines.helper.Counter;
 import com.function.config.AccountConfig;
-import com.function.helper.Counter;
 
 
 /**
@@ -38,10 +40,10 @@ public class QueueAggregation {
     @FunctionName("QueueAggregation")
     public void run(
             @QueueTrigger(name = "msg",
-                          queueName = AccountConfig.AGGREGATION_QUEUE_NAME,
+                          queueName = QueuePipelineConfig.AGGREGATION_QUEUE_NAME,
                           connection = "AzureWebJobsStorage") String message,
             @QueueOutput(name= "out",
-                         queueName = AccountConfig.RESULTS_QUEUE_NAME,
+                         queueName = QueuePipelineConfig.RESULTS_QUEUE_NAME,
                          connection = "AzureWebJobsStorage") OutputBinding<String> resultMsg,
             final ExecutionContext context) {
         
@@ -50,14 +52,14 @@ public class QueueAggregation {
         JSONObject jsonObject = new JSONObject(message);
 
         try {
-            int first = jsonObject.getInt(AccountConfig.FIRST_PARTITION);
-            int last = jsonObject.getInt(AccountConfig.LAST_PARTITION);
+            int first = jsonObject.getInt(QueuePipelineConfig.FIRST_PARTITION);
+            int last = jsonObject.getInt(QueuePipelineConfig.LAST_PARTITION);
 
             // init valid list
             for (long i = first; i <= last; i++) aggregationValid.add(false);
             
             // init queue on which the results of the partitioned task come in.
-            String partitionResultQueueName = jsonObject.getString(AccountConfig.RESULTS_QUEUE_NAME);
+            String partitionResultQueueName = jsonObject.getString(QueuePipelineConfig.RESULTS_QUEUE_NAME);
             QueueClient aggregationResultClient = new QueueClientBuilder()
                                 .connectionString(AccountConfig.CONNECTION_STRING)
                                 .queueName(partitionResultQueueName)
@@ -72,8 +74,8 @@ public class QueueAggregation {
                     String decodedMessage = new String(decodedBytes);
                     
                     JSONObject msgData = new JSONObject(decodedMessage);
-                    long id = msgData.getLong(AccountConfig.AGGREGATION_ID);
-                    JSONObject newCounts = msgData.getJSONObject(AccountConfig.NEW_COUNT_RESULT);
+                    long id = msgData.getLong(PipelineConfig.AGGREGATION_ID);
+                    JSONObject newCounts = msgData.getJSONObject(QueuePipelineConfig.NEW_COUNT_RESULT);
 
                     JSONObject nationKeyToAccountBalanceSum = newCounts.getJSONObject(Counter.NATION_KEY_TO_ACCOUNT_BALANCE_SUM_MAP);
                     JSONObject nationKeyToCount = newCounts.getJSONObject(Counter.NATION_KEY_TO_COUNT_MAP);
@@ -83,8 +85,8 @@ public class QueueAggregation {
                         BigDecimal nationCount = nationKeyToCount.getBigDecimal(nationKey);
 
                         Map<String, BigDecimal> nestedMapwithSumAndCount = new HashMap<>();
-                        nestedMapwithSumAndCount.put(AccountConfig.MERGE_RESULT_SUM, nationSum);
-                        nestedMapwithSumAndCount.put(AccountConfig.MERGE_RESULT_COUNT, nationCount);
+                        nestedMapwithSumAndCount.put(PipelineConfig.MERGE_RESULT_SUM, nationSum);
+                        nestedMapwithSumAndCount.put(PipelineConfig.MERGE_RESULT_COUNT, nationCount);
                         
                         nationKeyToSumAndCount.put(nationKey, nestedMapwithSumAndCount);
                     }
@@ -97,7 +99,7 @@ public class QueueAggregation {
             }
 
             JSONObject result = new JSONObject()
-                                    .put(AccountConfig.NEW_COUNT_RESULT, nationKeyToSumAndCount);
+                                    .put(QueuePipelineConfig.NEW_COUNT_RESULT, nationKeyToSumAndCount);
 
             resultMsg.setValue(result.toString());
             

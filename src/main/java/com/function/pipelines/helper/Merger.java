@@ -1,10 +1,11 @@
-package com.function.helper;
+package com.function.pipelines.helper;
 
 import com.azure.core.util.BinaryData;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.function.config.AccountConfig;
+import com.function.config.PipelineConfig;
+
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -53,7 +54,7 @@ public class Merger {
 
             nestedMap.forEach((key, value) -> {
                 // 2 cases only
-                if (key.equals(AccountConfig.MERGE_RESULT_COUNT)) {
+                if (key.equals(PipelineConfig.MERGE_RESULT_COUNT)) {
                     count.set(value);
                 } else {
                     sum.set(value);
