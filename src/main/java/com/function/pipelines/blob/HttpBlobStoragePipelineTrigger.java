@@ -5,6 +5,7 @@ import java.util.*;
 import com.azure.core.util.BinaryData;
 import com.function.config.BlobPipelineConfig;
 import com.function.config.PipelineConfig;
+import com.function.pipelines.helper.BlobContainerWrapper;
 import com.function.pipelines.helper.Partitioner;
 import com.microsoft.azure.functions.annotation.*;
 import com.microsoft.azure.functions.*;

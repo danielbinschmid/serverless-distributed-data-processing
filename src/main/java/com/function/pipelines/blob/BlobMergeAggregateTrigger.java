@@ -4,6 +4,7 @@ import com.azure.core.util.BinaryData;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.function.config.BlobPipelineConfig;
 import com.function.config.PipelineConfig;
+import com.function.pipelines.helper.BlobContainerWrapper;
 import com.function.pipelines.helper.Merger;
 import com.microsoft.azure.functions.annotation.BlobTrigger;
 import com.microsoft.azure.functions.annotation.FunctionName;

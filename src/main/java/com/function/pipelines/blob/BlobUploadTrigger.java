@@ -3,6 +3,7 @@ package com.function.pipelines.blob;
 
 import com.function.config.BlobPipelineConfig;
 import com.function.config.PipelineConfig;
+import com.function.pipelines.helper.BlobContainerWrapper;
 import com.function.pipelines.helper.Partitioner;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.*;

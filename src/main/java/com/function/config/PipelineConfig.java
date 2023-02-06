@@ -4,16 +4,8 @@ package com.function.config;
 
 public class PipelineConfig {
     
-
-
-    
-
-    // ------------------------------------------------------------------------------------------------
-
-    
-    // ------------------------------------------------------------------------------------------------
-
     // ------------------------ JSON Properties used for jobs descriptions. ---------------------------
+    
     // Common
     public static final String JOB_CONTAINER_PROP = "container";
     

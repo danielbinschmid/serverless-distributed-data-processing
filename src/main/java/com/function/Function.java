@@ -43,7 +43,7 @@ public class Function {
         // DefaultAzureCredential defaultCredential = new DefaultAzureCredentialBuilder().build();
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
             .endpoint(AccountConfig.BLOB_STORAGE_ACC_ENDPOINT)
-            .sasToken(AccountConfig.BLOB_STORAGE_ACC_SAS_TOKEN)
+            .sasToken(AccountConfig.STORAGE_ACC_SAS_TOKEN)
             .buildClient();
         
         BlobContainerClient client = blobServiceClient.getBlobContainerClient("tasks");

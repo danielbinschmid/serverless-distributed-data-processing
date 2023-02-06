@@ -14,7 +14,7 @@ import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
 import com.function.config.PipelineConfig;
-import com.function.pipelines.blob.BlobContainerWrapper;
+import com.function.pipelines.helper.BlobContainerWrapper;
 import com.function.pipelines.helper.Counter;
 import com.function.config.AccountConfig;
 

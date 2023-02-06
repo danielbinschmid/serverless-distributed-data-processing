@@ -3,6 +3,7 @@ package com.function.pipelines.blob;
 import com.azure.core.util.BinaryData;
 import com.function.config.PipelineConfig;
 import com.function.config.BlobPipelineConfig;
+import com.function.pipelines.helper.BlobContainerWrapper;
 import com.function.pipelines.helper.Counter;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.*;

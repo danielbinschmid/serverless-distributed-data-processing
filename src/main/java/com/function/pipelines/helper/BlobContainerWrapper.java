@@ -1,4 +1,4 @@
-package com.function.pipelines.blob;
+package com.function.pipelines.helper;
 
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.util.BinaryData;
@@ -17,7 +17,7 @@ public class BlobContainerWrapper
     public BlobContainerWrapper(String containerName) {
         this.blobContainerClient = new BlobContainerClientBuilder()
                 .endpoint(AccountConfig.BLOB_STORAGE_ACC_ENDPOINT)
-                .sasToken(AccountConfig.BLOB_STORAGE_ACC_SAS_TOKEN)
+                .sasToken(AccountConfig.STORAGE_ACC_SAS_TOKEN)
                 .containerName(containerName)
                 .buildClient();
     }

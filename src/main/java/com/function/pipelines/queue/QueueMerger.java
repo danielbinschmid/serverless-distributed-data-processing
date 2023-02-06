@@ -14,6 +14,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.function.config.QueuePipelineConfig;
+import com.function.pipelines.helper.BlobContainerWrapper;
+
 import org.json.JSONObject;
 
 import com.azure.core.util.BinaryData;
@@ -24,10 +26,10 @@ import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.time.Duration;
 
 import com.function.config.PipelineConfig;
-import com.function.pipelines.blob.BlobContainerWrapper;
 import com.function.config.AccountConfig;
 
 /**
@@ -53,7 +55,7 @@ public class QueueMerger {
         // 1. Lease result blob
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                             .endpoint(AccountConfig.BLOB_STORAGE_ACC_ENDPOINT)
-                            .sasToken(AccountConfig.BLOB_STORAGE_ACC_SAS_TOKEN)
+                            .sasToken(AccountConfig.STORAGE_ACC_SAS_TOKEN)
                             .buildClient();
         BlobContainerClient client = blobServiceClient.getBlobContainerClient(QueuePipelineConfig.RESULTS_BLOB_CONTAINER);
         BlobClient blobClient = client.getBlobClient(QueuePipelineConfig.FINAL_RESULTS_STATE_BLOB_NAME);
@@ -128,7 +130,7 @@ public class QueueMerger {
             nationToSumCount.forEach( (nationKey, sumAndCountMap) -> {
                     BigDecimal nationSum = sumAndCountMap.get(PipelineConfig.MERGE_RESULT_SUM);
                     BigDecimal nationCount = sumAndCountMap.get(PipelineConfig.MERGE_RESULT_COUNT);
-                    BigDecimal nationAverage = nationSum.divide(nationCount);
+                    BigDecimal nationAverage = nationSum.divide(nationCount, MathContext.DECIMAL128);
                     nationBalanceAverage.put(nationKey, nationAverage);
                 }
             );
