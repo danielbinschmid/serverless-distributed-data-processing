@@ -84,6 +84,12 @@ public class QueueAggregation {
                         BigDecimal nationSum = nationKeyToAccountBalanceSum.getBigDecimal(nationKey);
                         BigDecimal nationCount = nationKeyToCount.getBigDecimal(nationKey);
 
+                        // update current
+                        if (nationKeyToSumAndCount.containsKey(nationKey)) {
+                            nationSum = nationSum.add(nationKeyToSumAndCount.get(nationKey).get("sum"));
+                            nationCount = nationCount.add(nationKeyToSumAndCount.get(nationKey).get("count"));
+                        }
+
                         Map<String, BigDecimal> nestedMapwithSumAndCount = new HashMap<>();
                         nestedMapwithSumAndCount.put(PipelineConfig.MERGE_RESULT_SUM, nationSum);
                         nestedMapwithSumAndCount.put(PipelineConfig.MERGE_RESULT_COUNT, nationCount);

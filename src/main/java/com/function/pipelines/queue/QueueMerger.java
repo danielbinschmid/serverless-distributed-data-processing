@@ -6,6 +6,7 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 
 import com.azure.storage.blob.models.BlobRequestConditions;
+import com.azure.storage.blob.models.BlockBlobItem;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
 import com.azure.storage.blob.specialized.BlobLeaseClient;
 import com.azure.storage.blob.specialized.BlobLeaseClientBuilder;
@@ -18,6 +19,7 @@ import com.function.pipelines.helper.BlobContainerWrapper;
 
 import org.json.JSONObject;
 
+import com.azure.core.http.rest.Response;
 import com.azure.core.util.BinaryData;
 import com.azure.core.util.Context;
 
@@ -27,7 +29,6 @@ import com.microsoft.azure.functions.annotation.QueueTrigger;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.time.Duration;
 
 import com.function.config.PipelineConfig;
 import com.function.config.AccountConfig;
@@ -125,8 +126,9 @@ public class QueueMerger {
             BlobParallelUploadOptions opts = new BlobParallelUploadOptions(BinaryData.fromString(newState.toString()));
             opts.setRequestConditions(cond);
             // Response<BlockBlobItem> response = 
-            blobClient.uploadWithResponse(opts, Duration.ofMillis(500), Context.NONE);
-            
+            Response<BlockBlobItem> response = blobClient.uploadWithResponse(opts, null, Context.NONE);
+            context.getLogger().info("MERGER upload status: " + String.valueOf(response.getStatusCode()));
+
             // compute averages and upload to output result blob
             BlobContainerWrapper resultCopy = new BlobContainerWrapper(QueuePipelineConfig.RESULTS_BLOB_CONTAINER);
             Map<String, BigDecimal> nationBalanceAverage = new HashMap<>();
@@ -161,8 +163,10 @@ public class QueueMerger {
      */
     private String acquireLease(BlobLeaseClient leaseClient, ExecutionContext context) {
         try 
-        {
-            return leaseClient.acquireLease(20);
+        {  
+            String ret = leaseClient.acquireLease(20);
+            context.getLogger().info("Leased shared result blob.");
+            return ret;
         } 
         catch (Exception e) 
         {

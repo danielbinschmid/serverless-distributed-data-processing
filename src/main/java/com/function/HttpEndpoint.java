@@ -105,8 +105,11 @@ public class HttpEndpoint {
         BlobContainerWrapper uploadContainer = new BlobContainerWrapper(PipelineConfig.FILE_LIST_CONTAINER_NAME);
 
         List<String> listOfSkippedFiles = new ArrayList<>();
+        List<String> listOfIncludedFiles = new ArrayList<>();
+
 
         uploadContainer.getAllBlobs().forEach(blob -> {
+            
             // create queue to enqueue aggregationresults into
             String resultClientName = "result" + java.util.UUID.randomUUID();
             QueueClient aggregationResultClient = new QueueClientBuilder()
@@ -143,12 +146,16 @@ public class HttpEndpoint {
                     .put(QueuePipelineConfig.LAST_PARTITION, PipelineConfig.N_PARTITIONS - 1)
                     .put(QueuePipelineConfig.RESULTS_QUEUE_NAME, resultClientName);
             aggregationClient.sendMessage(Base64.getEncoder().encodeToString(aggregationTask.toString().getBytes()));
+            
+            listOfIncludedFiles.add(blob.getName());
         });
 
         StringBuilder response = new StringBuilder();
         response.append("Pipeline was successfully triggered.\n")
                 .append("List of skipped files: ")
-                .append(listOfSkippedFiles);
+                .append(listOfSkippedFiles)
+                .append("\nList of included files: ")
+                .append(listOfIncludedFiles);
 
         return response;
     }
