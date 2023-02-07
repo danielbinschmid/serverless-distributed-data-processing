@@ -2,8 +2,7 @@ package com.function.config;
 
 public class BlobPipelineConfig {
     // ----------------------------- Storage account container names. ---------------------------------
-    // Name of the container where the files are uploaded
-    public final static String FILE_LIST_CONTAINER_NAME = "filelists";
+    
 
     // Names of the containers where the aggregation jobs descriptions are uploaded
     public final static String AGGREGATION_JOBS_CONTAINER_NAME = "aggregationjobs";

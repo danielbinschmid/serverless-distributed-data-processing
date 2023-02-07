@@ -16,7 +16,16 @@ Copy to [STORAGE_ACC_PRIM_KEY](./src/main/java/com/function/config/AccountConfig
 Execute [Initialization.java](./src/main/java/com/function/Initialization.java). Execution can be done in any way and can also be done with VSCode. Script initializes all needed containers, queues and potentially more. <br>
 The pipeline is now set up and can be run locally, as well as on Microsoft Azure.
 
+
+# Execution
 ## Running locally
 ### VSCode
 Instructions can be found on [Azure tutorial](https://learn.microsoft.com/en-us/azure/azure-functions/create-first-function-vs-code-java#run-the-function-locally).
 To make sure that VSCode uses proper account configuration values, run `Azure Functions: Download Remote Settings` via the `Command Palette`.
+
+## Deploying to Azure
+
+## Benchmarking
+1. Upload the data into Azure Blob storage of the storage account of your Azure function app.
+2. Deploy functions app either locally or on Azure (both works).
+3. Trigger pipeline by: TODO

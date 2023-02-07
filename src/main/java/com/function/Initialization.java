@@ -9,7 +9,7 @@ import com.azure.storage.queue.models.QueueStorageException;
 
 import com.function.config.QueuePipelineConfig;
 import com.function.config.BlobPipelineConfig;
-
+import com.function.config.PipelineConfig;
 import com.function.config.AccountConfig;
 
 public class Initialization {
@@ -21,6 +21,9 @@ public class Initialization {
                             .sasToken(AccountConfig.STORAGE_ACC_SAS_TOKEN)
                             .buildClient();
 
+        // Container where the files are uploaded
+        createContainer(blobServiceClient, PipelineConfig.FILE_LIST_CONTAINER_NAME);
+
         Initialization.initQueuePipeline(blobServiceClient);
         Initialization.initBlobPipeline(blobServiceClient);
     }
@@ -30,9 +33,6 @@ public class Initialization {
         System.out.println("Setting up Azure Queues based pipeline..");
 
         // ------ set up blob container ------------
-
-        // create tasks container
-        createContainer(blobServiceClient, QueuePipelineConfig.TASKS_BLOB_CONTAINER);
 
         // create results container
         createContainer(blobServiceClient, QueuePipelineConfig.RESULTS_BLOB_CONTAINER);
@@ -53,8 +53,7 @@ public class Initialization {
     private static void initBlobPipeline(BlobServiceClient blobServiceClient) {
         System.out.println("Setting up Azure Blob only based pipeline..");
 
-        // Container where the files are uploaded
-        createContainer(blobServiceClient, BlobPipelineConfig.FILE_LIST_CONTAINER_NAME);
+        
 
         // Container where the aggregation job descriptions are uploaded
         createContainer(blobServiceClient, BlobPipelineConfig.AGGREGATION_JOBS_CONTAINER_NAME);

@@ -16,8 +16,6 @@ public class QueuePipelineConfig {
     // -------------------------------- Azure blob container names ------------------------------------
     // Need to be created *before* deploying the pipeline.
 
-    // Blob container which contains all file inputs
-    public static final String TASKS_BLOB_CONTAINER = "tasks";
     // Blob container which contains the results of the pipeline
     public static final String RESULTS_BLOB_CONTAINER = "results";
 
@@ -34,4 +32,6 @@ public class QueuePipelineConfig {
     public static final String FIRST_PARTITION = "first";
     public static final String LAST_PARTITION = "last";
     public static final String NEW_COUNT_RESULT = "result";
+
+    public static final String RESULT_COUNTER = "nResults";
 }

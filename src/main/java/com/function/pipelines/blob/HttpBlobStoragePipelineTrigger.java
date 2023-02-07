@@ -25,7 +25,7 @@ public class HttpBlobStoragePipelineTrigger {
             @HttpTrigger(name = "req", methods = {HttpMethod.GET, HttpMethod.POST}, authLevel = AuthorizationLevel.ANONYMOUS) HttpRequestMessage<Optional<String>> request,
             final ExecutionContext context) {
 
-        BlobContainerWrapper uploadContainer = new BlobContainerWrapper(BlobPipelineConfig.FILE_LIST_CONTAINER_NAME);
+        BlobContainerWrapper uploadContainer = new BlobContainerWrapper(PipelineConfig.FILE_LIST_CONTAINER_NAME);
         BlobContainerWrapper aggregationJobsContainer = new BlobContainerWrapper(BlobPipelineConfig.AGGREGATION_JOBS_CONTAINER_NAME);
 
         List<String> listOfSkippedFiles = new ArrayList<>();
@@ -43,7 +43,7 @@ public class HttpBlobStoragePipelineTrigger {
 
             for (int i = 0; i < PipelineConfig.N_PARTITIONS; i++) {
                 JSONObject jsonObject = Partitioner.getIthPartition(i, binaryData.toBytes(), blob.getName());
-                jsonObject.put(PipelineConfig.JOB_CONTAINER_PROP, BlobPipelineConfig.FILE_LIST_CONTAINER_NAME);
+                jsonObject.put(PipelineConfig.JOB_CONTAINER_PROP, PipelineConfig.FILE_LIST_CONTAINER_NAME);
                 aggregationJobsContainer.writeFile(filenameForUpload + "." + i + ".json", jsonObject.toString());
             }
         });

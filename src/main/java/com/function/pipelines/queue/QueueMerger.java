@@ -63,7 +63,8 @@ public class QueueMerger {
         // create results blob if it does not exist.
         if (!blobClient.exists()) {
             JSONObject state = new JSONObject()
-                            .put(QueuePipelineConfig.NEW_COUNT_RESULT, new JSONObject());
+                            .put(QueuePipelineConfig.NEW_COUNT_RESULT, new JSONObject())
+                            .put(QueuePipelineConfig.RESULT_COUNTER, 0);
             BlobContainerWrapper resultBlobContainerWrapper = new BlobContainerWrapper(QueuePipelineConfig.RESULTS_BLOB_CONTAINER);
             resultBlobContainerWrapper.writeFile(QueuePipelineConfig.FINAL_RESULTS_STATE_BLOB_NAME, state.toString());
         }
@@ -77,8 +78,10 @@ public class QueueMerger {
         // 2. load state
         BlobContainerWrapper resultBlobContainerWrapper = new BlobContainerWrapper(QueuePipelineConfig.RESULTS_BLOB_CONTAINER);
         BinaryData currentStateBinary = resultBlobContainerWrapper.readFile(QueuePipelineConfig.FINAL_RESULTS_STATE_BLOB_NAME);
-        JSONObject currentStateJSON = new JSONObject(currentStateBinary.toString()).getJSONObject(QueuePipelineConfig.NEW_COUNT_RESULT);
-        
+        JSONObject currentStateFull = new JSONObject(currentStateBinary.toString());
+        JSONObject currentStateJSON = currentStateFull.getJSONObject(QueuePipelineConfig.NEW_COUNT_RESULT);
+        long count = currentStateFull.getLong(QueuePipelineConfig.RESULT_COUNTER);
+
         for(String countryKey: currentStateJSON.keySet()) {    
             JSONObject countryData = currentStateJSON.getJSONObject(countryKey);
             BigDecimal countrySum = countryData.getBigDecimal(PipelineConfig.MERGE_RESULT_SUM);
@@ -113,7 +116,8 @@ public class QueueMerger {
 
         // 4. upload
         JSONObject newState = new JSONObject()
-                            .put(QueuePipelineConfig.NEW_COUNT_RESULT, nationToSumCount);
+                            .put(QueuePipelineConfig.NEW_COUNT_RESULT, nationToSumCount)
+                            .put(QueuePipelineConfig.RESULT_COUNTER, count + 1l);
         
         try {   
             // update state of result blob
@@ -135,8 +139,11 @@ public class QueueMerger {
                 }
             );
 
-            JSONObject nationBalanceAverageResult = new JSONObject(nationBalanceAverage);
-            resultCopy.writeFile(QueuePipelineConfig.FINAL_RESULTS_OUTPUT_BLOB_NAME, nationBalanceAverageResult.toString());
+            // JSONObject nationBalanceAverageResult = new JSONObject(nationBalanceAverage);
+            JSONObject sharedResult = new JSONObject()
+                    .put(QueuePipelineConfig.NEW_COUNT_RESULT, nationBalanceAverage)
+                    .put(QueuePipelineConfig.RESULT_COUNTER, count);
+            resultCopy.writeFile(QueuePipelineConfig.FINAL_RESULTS_OUTPUT_BLOB_NAME, sharedResult.toString());
 
             leaseClient.releaseLease();
 
