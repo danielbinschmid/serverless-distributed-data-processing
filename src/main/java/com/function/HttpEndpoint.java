@@ -16,6 +16,8 @@ import com.function.config.QueuePipelineConfig;
 import com.function.pipelines.helper.BlobContainerWrapper;
 import com.microsoft.azure.functions.annotation.*;
 import com.microsoft.azure.functions.*;
+
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class HttpEndpoint {
@@ -26,10 +28,9 @@ public class HttpEndpoint {
     @FunctionName("HttpEndpoint")
     public HttpResponseMessage run(
             @HttpTrigger(name = "req", 
-                    methods = {HttpMethod.GET}, 
+                    methods = {HttpMethod.GET, HttpMethod.POST}, 
                     authLevel = AuthorizationLevel.ANONYMOUS,
-                    route = "event-driven-pipeline/{type:alpha}/{pipeline:alpha}") HttpRequestMessage<Optional<String>> request,
-            @BindingName("type") String type,
+                    route = "event-driven-pipeline/{pipeline:alpha}") HttpRequestMessage<Optional<String>> request,
             @BindingName("pipeline") String pipeline,
             final ExecutionContext context) {
         
@@ -39,37 +40,42 @@ public class HttpEndpoint {
                             .sasToken(AccountConfig.STORAGE_ACC_SAS_TOKEN)
                             .buildClient();
 
-        switch(type) {
-            case "trigger":
-                switch(pipeline) {
-                    case "queue":
-                        return request.createResponseBuilder(HttpStatus.OK).body(queuePipelineTrigger()).build();
-                    case "blob":
-                        break;
-                    default:
-                        return request.createResponseBuilder(HttpStatus.OK).body(getMenuMessage()).build();
-                }
-                break;
-            case "result":
-                switch(pipeline) {
-                    case "queue":
-                        return request.createResponseBuilder(HttpStatus.OK).body(getCurrentQueuePipelineResult()).build();
-                    case "blob":
-                        break;
-                    default:
-                        return request.createResponseBuilder(HttpStatus.OK).body(getMenuMessage()).build();
-                }
-                break;
-            default:
-                return request.createResponseBuilder(HttpStatus.OK).body(getMenuMessage()).build();
-        }
+        
+        if (request.getHttpMethod() == HttpMethod.GET) {
+            switch(pipeline) {
+                case "queue":
+                    return request.createResponseBuilder(HttpStatus.OK).body(getCurrentQueuePipelineResult()).build();
+                case "blob":
+                    break;
+                default:
+                    return request.createResponseBuilder(HttpStatus.OK).body(getMenuMessage()).build();
+            }
+        } else if (request.getHttpMethod() == HttpMethod.POST) {
+            switch(pipeline) {
+                case "queue":
+                    
+                    Optional<String> body = request.getBody();
+                    if (!body.isPresent()) return request.createResponseBuilder(HttpStatus.FORBIDDEN).body("No body found in POST request").build();
+                    JSONObject obj = new JSONObject(body.get());
+                    JSONArray filelist = obj.getJSONArray("filelist");
+                    return request.createResponseBuilder(HttpStatus.OK).body(queuePipelineTrigger(filelist)).build();
 
+                case "blob":
+                    break;
+                default:
+                    return request.createResponseBuilder(HttpStatus.OK).body(getMenuMessage()).build();
+            }
+        } else {
+            return request.createResponseBuilder(HttpStatus.OK).body("http method unknown").build();
+        }
+        
         return request.createResponseBuilder(HttpStatus.OK).body("not implemented yet").build();
     }
 
 
     private String getMenuMessage() {
-        return "event-driven-pipeline/trigger/<pipeline_type> for triggering a pipeline\n"
+        return "event-driven-pipeline/<pipeline_type> POST request for triggering a pipeline\n"
+            + "event-driven-pipeline/<pipeline_type> GET request for fetching the current result of a pipeline\n"
             + "event-driven-pipeline/result/<pipeline_type> for fetching the current result of a pipeline\n"
             + "pipeline_type -> 'queue' for queue based pipeline\n"
             + "pipeline_type -> 'blob' for blob based pipeline";
@@ -89,7 +95,7 @@ public class HttpEndpoint {
     }
 
 
-    private StringBuilder queuePipelineTrigger() {
+    private StringBuilder queuePipelineTrigger(JSONArray filelist) {
         // queue for issuing tasks            
         QueueClient tasksQueue = new QueueClientBuilder()
                 .connectionString(AccountConfig.CONNECTION_STRING)
@@ -119,18 +125,21 @@ public class HttpEndpoint {
             context.getLogger().info("Error code: " + e.getErrorCode() + "Message: " + e.getMessage()); 
         }
 
-
-        uploadContainer.getAllBlobs().forEach(blob -> {
-
+        for (int i = 0; i < filelist.length(); i++) {
+            String blobName = filelist.getString(i);
+            if (!uploadContainer.fileExists(blobName)) {
+                listOfSkippedFiles.add(blobName);
+                continue;
+            }
             JSONObject jsonObject = new JSONObject()
-                .put(PipelineConfig.AGGREGATION_JOB_TARGET, blob.getName())
+                .put(PipelineConfig.AGGREGATION_JOB_TARGET, blobName)
                 .put(PipelineConfig.JOB_CONTAINER_PROP, PipelineConfig.FILE_LIST_CONTAINER_NAME)
                 .put(QueuePipelineConfig.RESULTS_QUEUE_NAME, resultClientName);
                 
             tasksQueue.sendMessage(Base64.getEncoder().encodeToString(jsonObject.toString().getBytes()));
 
-            listOfIncludedFiles.add(blob.getName());
-        });
+            listOfIncludedFiles.add(blobName);
+        }
 
         // issue aggregation task
         JSONObject aggregationTask = new JSONObject()
@@ -139,7 +148,6 @@ public class HttpEndpoint {
         aggregationClient.sendMessage(Base64.getEncoder().encodeToString(aggregationTask.toString().getBytes()));
 
         
-
         StringBuilder response = new StringBuilder();
         response.append("Pipeline was successfully triggered.\n")
                 .append("List of skipped files: ")

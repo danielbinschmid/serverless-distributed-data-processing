@@ -31,6 +31,11 @@ public class BlobContainerWrapper
             }
     }
 
+    public boolean fileExists(String filename) {
+        BlobClient blobClient = blobContainerClient.getBlobClient(filename);
+        return blobClient.exists();
+    }
+
     public BinaryData readFile(String filename) {
         BinaryData binaryData = null;
         try {
