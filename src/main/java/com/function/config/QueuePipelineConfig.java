@@ -30,6 +30,7 @@ public class QueuePipelineConfig {
 
 
     public static final String FIRST_PARTITION = "first";
+    public static final String PARTITIONS = "partitions";
     public static final String LAST_PARTITION = "last";
     public static final String NEW_COUNT_RESULT = "result";
 

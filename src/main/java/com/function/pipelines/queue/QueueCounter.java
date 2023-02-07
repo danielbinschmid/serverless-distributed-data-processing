@@ -35,10 +35,9 @@ public class QueueCounter {
         JSONObject jsonObject = new JSONObject(message);
 
         try {
-            int begin = jsonObject.getInt(PipelineConfig.AGGREGATION_JOB_RANGE_START);
-            int end = jsonObject.getInt(PipelineConfig.AGGREGATION_JOB_RANGE_END);
+            String filename = jsonObject.getString(PipelineConfig.AGGREGATION_JOB_TARGET);
+            context.getLogger().info("COUNTER: Received " + filename + " as task.");
             String resultqueuename = jsonObject.getString(QueuePipelineConfig.RESULTS_QUEUE_NAME);
-            int aggregationID = jsonObject.getInt(PipelineConfig.AGGREGATION_ID);
 
             QueueClient resultClient = new QueueClientBuilder()
                                 .connectionString(AccountConfig.CONNECTION_STRING)
@@ -46,20 +45,28 @@ public class QueueCounter {
                                 .buildClient();
             
             BlobContainerWrapper blobContainerWrapper = new BlobContainerWrapper(jsonObject.getString(PipelineConfig.JOB_CONTAINER_PROP));
-            BinaryData file = blobContainerWrapper.readFile(jsonObject.getString(PipelineConfig.AGGREGATION_JOB_TARGET));
+            BinaryData file = blobContainerWrapper.readFile(filename);
 
             if (file != null) {
-                Map<String, Map<String, BigDecimal>> nationToSumCount = Counter.findCountAndSum(file, begin, end);
+                Map<String, Map<String, BigDecimal>> nationToSumCount = Counter.findCountAndSum(file, -1, -1);
 
                 // TODO: logic for assumption, that a single results fits into the 64kB restriction of Azure queues. 
                 JSONObject res = new JSONObject()
                             .put(PipelineConfig.TYPE_OF_CONTENT, QueuePipelineConfig.NEW_COUNT_RESULT)
-                            .put(PipelineConfig.AGGREGATION_ID, aggregationID)
+                            .put(PipelineConfig.AGGREGATION_ID, filename)
                             .put(QueuePipelineConfig.NEW_COUNT_RESULT, nationToSumCount);
 
                 resultClient.sendMessage(Base64.getEncoder().encodeToString(res.toString().getBytes()));
             } else {
-                context.getLogger().info("Something went wrong! We could not read the file!");
+                context.getLogger().info("Something went wrong! We could not read the file " + filename);
+                
+                // re-issue to queue
+                QueueClient tasksQueue = new QueueClientBuilder()
+                        .connectionString(AccountConfig.CONNECTION_STRING)
+                        .queueName(QueuePipelineConfig.TASKS_QUEUE_NAME)
+                        .buildClient();
+                tasksQueue.sendMessage(Base64.getEncoder().encodeToString(jsonObject.toString().getBytes()));
+
             }
         } 
         catch (JSONException e) {

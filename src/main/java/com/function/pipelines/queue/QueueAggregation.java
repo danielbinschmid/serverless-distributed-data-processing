@@ -11,6 +11,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import com.azure.core.http.rest.PagedIterable;
@@ -30,11 +31,11 @@ import com.function.config.AccountConfig;
  * Aggregates results from the partitioned tasks of a file input.
  */
 public class QueueAggregation {
-    private static final int maxQueueMsgs = 2;
+    private static final int maxQueueMsgs = 5;
     private static final long waitTime = 500;
 
     private Map<String, Map<String, BigDecimal>> nationKeyToSumAndCount;
-    private ArrayList<Boolean> aggregationValid;
+    private Map<String, Boolean> aggregationValid;
 
 
     @FunctionName("QueueAggregation")
@@ -48,16 +49,17 @@ public class QueueAggregation {
             final ExecutionContext context) {
         
         nationKeyToSumAndCount = new HashMap<>();
-        aggregationValid = new ArrayList<>();
+        aggregationValid = new HashMap<>();
         JSONObject jsonObject = new JSONObject(message);
 
         try {
-            int first = jsonObject.getInt(QueuePipelineConfig.FIRST_PARTITION);
-            int last = jsonObject.getInt(QueuePipelineConfig.LAST_PARTITION);
+            JSONArray partitions = jsonObject.getJSONArray(QueuePipelineConfig.PARTITIONS);
 
-            // init valid list
-            for (long i = first; i <= last; i++) aggregationValid.add(false);
-            
+            for (int i = 0; i < partitions.length(); i++) {
+                String partition = partitions.getString(i);
+                aggregationValid.put(partition, false);
+            }
+
             // init queue on which the results of the partitioned task come in.
             String partitionResultQueueName = jsonObject.getString(QueuePipelineConfig.RESULTS_QUEUE_NAME);
             QueueClient aggregationResultClient = new QueueClientBuilder()
@@ -74,7 +76,8 @@ public class QueueAggregation {
                     String decodedMessage = new String(decodedBytes);
                     
                     JSONObject msgData = new JSONObject(decodedMessage);
-                    long id = msgData.getLong(PipelineConfig.AGGREGATION_ID);
+                    String id = msgData.getString(PipelineConfig.AGGREGATION_ID);
+                    
                     JSONObject newCounts = msgData.getJSONObject(QueuePipelineConfig.NEW_COUNT_RESULT);
 
                     JSONObject nationKeyToAccountBalanceSum = newCounts.getJSONObject(Counter.NATION_KEY_TO_ACCOUNT_BALANCE_SUM_MAP);
@@ -97,7 +100,9 @@ public class QueueAggregation {
                         nationKeyToSumAndCount.put(nationKey, nestedMapwithSumAndCount);
                     }
                     
-                    aggregationValid.set((int) id, true);
+                    aggregationValid.put(id, true);
+                    context.getLogger().info("AGGREGATION: New aggregation result: " + id);
+                    // context.getLogger().info("AGGREGATION: Missing aggregations: " + getMissingAggregations());
                     aggregationResultClient.deleteMessage(msg.getMessageId(), msg.getPopReceipt());
                 }
 
@@ -111,14 +116,22 @@ public class QueueAggregation {
             
             aggregationResultClient.delete();
         } catch (Exception e) { 
-            System.err.println("EXCEPTION: " + e.getMessage()); 
+            System.err.println("EXCEPTION in Aggregation: " + e.getMessage()); 
         }    
             
     }
 
+    private ArrayList<String> getMissingAggregations() {
+        ArrayList<String> missing = new ArrayList<>();
+        for (Map.Entry<String, Boolean> entry: aggregationValid.entrySet()) {
+            if (!entry.getValue()) missing.add(entry.getKey()); 
+        }
+        return missing;
+    }
+
     private boolean isAggregationFinished() {
         boolean isValid = true;
-        for(boolean x: aggregationValid) if (!x) isValid = false;
+        for(boolean x: aggregationValid.values()) if (!x) isValid = false;
         return isValid;
     }
 }

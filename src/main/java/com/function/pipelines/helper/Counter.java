@@ -10,6 +10,13 @@ public class Counter {
     public static String NATION_KEY_TO_COUNT_MAP = "count";
     public static String NATION_KEY_TO_ACCOUNT_BALANCE_SUM_MAP = "sum";
 
+    /**
+     * 
+     * @param file
+     * @param begin - if -1, then begin at 0
+     * @param end - if -1, then scan whole file
+     * @return
+     */
     public static Map<String, Map<String, BigDecimal>> findCountAndSum(BinaryData file, int begin, int end) {
         byte[] fileArray = file.toBytes();
 
@@ -17,7 +24,10 @@ public class Counter {
         Map<String, BigDecimal> nationKeyToCount = new HashMap<>();
         StringBuilder temp = new StringBuilder();
 
-        int i = begin;
+        int i;
+        if (begin == -1) { i = 0; } else { i = begin; }
+        if (end == -1) end = fileArray.length;
+
         for (; i < end && i < fileArray.length; i++) {
             if (fileArray[i] == '\n') {
                 if (temp.length() != 0) {
@@ -48,6 +58,8 @@ public class Counter {
         resultMap.put(NATION_KEY_TO_ACCOUNT_BALANCE_SUM_MAP, nationKeyToAccountBalanceSum);
         return resultMap;
     }
+
+
 
     private static void countCurrent(Map<String, BigDecimal> values, Map<String, BigDecimal> nationKeyToCount, String line) throws Exception {
         String[] splitArray = line.split("\\|");

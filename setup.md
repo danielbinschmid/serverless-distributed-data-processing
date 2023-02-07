@@ -28,4 +28,8 @@ To make sure that VSCode uses proper account configuration values, run `Azure Fu
 ## Benchmarking
 1. Upload the data into Azure Blob storage of the storage account of your Azure function app.
 2. Deploy functions app either locally or on Azure (both works).
-3. Trigger pipeline by: TODO
+3. Trigger pipeline after deploying to Azure:
+Copy paste the [API link](https://cbdp.azurewebsites.net/api/event-driven-pipeline/requesttype/pipeline) into your browser of choice.
+https://cbdp.azurewebsites.net/api/event-driven-pipeline/result/queue 
+3. Trigger pipeline locally:
+Analogous to triggering after deployment but with `localhost` instead of `cbdp.azurewebsites.net/api`. 

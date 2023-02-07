@@ -14,7 +14,6 @@ import com.function.config.AccountConfig;
 import com.function.config.PipelineConfig;
 import com.function.config.QueuePipelineConfig;
 import com.function.pipelines.helper.BlobContainerWrapper;
-import com.function.pipelines.helper.Partitioner;
 import com.microsoft.azure.functions.annotation.*;
 import com.microsoft.azure.functions.*;
 import org.json.JSONObject;
@@ -107,48 +106,39 @@ public class HttpEndpoint {
         List<String> listOfSkippedFiles = new ArrayList<>();
         List<String> listOfIncludedFiles = new ArrayList<>();
 
+        // create queue to enqueue aggregationresults into
+        String resultClientName = "result" + java.util.UUID.randomUUID();
+        QueueClient aggregationResultClient = new QueueClientBuilder()
+            .connectionString(AccountConfig.CONNECTION_STRING)
+            .queueName(resultClientName)
+            .buildClient();
+
+        try { 
+            aggregationResultClient.create(); 
+        } catch (QueueStorageException e) {
+            context.getLogger().info("Error code: " + e.getErrorCode() + "Message: " + e.getMessage()); 
+        }
+
 
         uploadContainer.getAllBlobs().forEach(blob -> {
-            
-            // create queue to enqueue aggregationresults into
-            String resultClientName = "result" + java.util.UUID.randomUUID();
-            QueueClient aggregationResultClient = new QueueClientBuilder()
-                .connectionString(AccountConfig.CONNECTION_STRING)
-                .queueName(resultClientName)
-                .buildClient();
 
-            try { 
-                aggregationResultClient.create(); 
-            } catch (QueueStorageException e) {
-                context.getLogger().info("Error code: " + e.getErrorCode() + "Message: " + e.getMessage()); 
-            }
+            JSONObject jsonObject = new JSONObject()
+                .put(PipelineConfig.AGGREGATION_JOB_TARGET, blob.getName())
+                .put(PipelineConfig.JOB_CONTAINER_PROP, PipelineConfig.FILE_LIST_CONTAINER_NAME)
+                .put(QueuePipelineConfig.RESULTS_QUEUE_NAME, resultClientName);
+                
+            tasksQueue.sendMessage(Base64.getEncoder().encodeToString(jsonObject.toString().getBytes()));
 
-
-            BinaryData binaryData = uploadContainer.readFile(blob.getName());
-            if (binaryData == null) {
-                // TODO: Is skipping the file a good approach?
-                System.err.println("Something went wrong while trying to read: " + blob.getName());
-                listOfSkippedFiles.add(blob.getName());
-                return;
-            }
-
-            for (int i = 0; i < PipelineConfig.N_PARTITIONS; i++) {
-                JSONObject jsonObject = Partitioner.getIthPartition(i, binaryData.toBytes(), blob.getName());
-                jsonObject.put(PipelineConfig.JOB_CONTAINER_PROP, PipelineConfig.FILE_LIST_CONTAINER_NAME);
-                jsonObject.put(QueuePipelineConfig.RESULTS_QUEUE_NAME, resultClientName);
-                jsonObject.put(PipelineConfig.AGGREGATION_ID, i);
-                tasksQueue.sendMessage(Base64.getEncoder().encodeToString(jsonObject.toString().getBytes()));
-            }
-
-            // issue aggregation task
-            JSONObject aggregationTask = new JSONObject()
-                    .put(QueuePipelineConfig.FIRST_PARTITION, 0)
-                    .put(QueuePipelineConfig.LAST_PARTITION, PipelineConfig.N_PARTITIONS - 1)
-                    .put(QueuePipelineConfig.RESULTS_QUEUE_NAME, resultClientName);
-            aggregationClient.sendMessage(Base64.getEncoder().encodeToString(aggregationTask.toString().getBytes()));
-            
             listOfIncludedFiles.add(blob.getName());
         });
+
+        // issue aggregation task
+        JSONObject aggregationTask = new JSONObject()
+                .put(QueuePipelineConfig.PARTITIONS, listOfIncludedFiles)
+                .put(QueuePipelineConfig.RESULTS_QUEUE_NAME, resultClientName);
+        aggregationClient.sendMessage(Base64.getEncoder().encodeToString(aggregationTask.toString().getBytes()));
+
+        
 
         StringBuilder response = new StringBuilder();
         response.append("Pipeline was successfully triggered.\n")
