@@ -190,23 +190,35 @@ public class HttpEndpoint {
 
         for (int i = 0; i < filelist.length(); i++) {
             String blobName = filelist.getString(i);
-            // We need the byte length to partition the file :(
-            BinaryData binaryData = uploadContainer.readFile(blobName);
-
-            if (binaryData == null) {
-                context.getLogger().info("Something went wrong while trying to read: " + blobName);
-                listOfSkippedFiles.add(blobName);
-                continue;
-            }
-
-            listOfIncludedFiles.add(blobName);
             String filenameForUpload = blobName.substring(0, blobName.length() - 4);
 
-            for (int j = 0; j < PipelineConfig.N_PARTITIONS; j++) {
-                JSONObject jsonObject = Partitioner.getIthPartition(j, binaryData.toBytes(), blobName);
+            if (PipelineConfig.N_PARTITIONS == 1) {
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put(PipelineConfig.AGGREGATION_JOB_TARGET, blobName);
+                jsonObject.put(PipelineConfig.AGGREGATION_JOB_RANGE_START, -1);
+                jsonObject.put(PipelineConfig.AGGREGATION_JOB_RANGE_END, -1);
                 jsonObject.put(PipelineConfig.JOB_CONTAINER_PROP, PipelineConfig.FILE_LIST_CONTAINER_NAME);
-                aggregationJobsContainer.writeFile(filenameForUpload + "." + j + ".json", jsonObject.toString());
+                aggregationJobsContainer.writeFile(filenameForUpload + ".0.json", jsonObject.toString());
+
+            } else {
+                // We need the byte length to partition the file :(
+                BinaryData binaryData = uploadContainer.readFile(blobName);
+
+                if (binaryData == null) {
+                    context.getLogger().info("Something went wrong while trying to read: " + blobName);
+                    listOfSkippedFiles.add(blobName);
+                    continue;
+                }
+
+                listOfIncludedFiles.add(blobName);
+
+                for (int j = 0; j < PipelineConfig.N_PARTITIONS; j++) {
+                    JSONObject jsonObject = Partitioner.getIthPartition(j, binaryData.toBytes(), blobName);
+                    jsonObject.put(PipelineConfig.JOB_CONTAINER_PROP, PipelineConfig.FILE_LIST_CONTAINER_NAME);
+                    aggregationJobsContainer.writeFile(filenameForUpload + "." + j + ".json", jsonObject.toString());
+                }
             }
+
         }
 
         StringBuilder response = new StringBuilder();
