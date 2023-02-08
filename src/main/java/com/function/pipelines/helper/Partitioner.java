@@ -38,6 +38,9 @@ public class Partitioner {
                 break;
             }
         }
+        if (index == content.length) {
+            return index;
+        }
         // Returns the first byte of the next line
         return index + 1;
     }

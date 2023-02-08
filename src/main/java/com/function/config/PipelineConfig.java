@@ -6,7 +6,7 @@ public class PipelineConfig {
     
     // ------------------------ JSON Properties used for jobs descriptions. ---------------------------
     // Name of the container where the files are uploaded
-    public final static String FILE_LIST_CONTAINER_NAME = "filelists";
+    public final static String FILE_LIST_CONTAINER_NAME = "filelist";
     
     // Common
     public static final String JOB_CONTAINER_PROP = "container";
@@ -30,9 +30,6 @@ public class PipelineConfig {
     // ------------------------------------------------------------------------------------------------
 
     // -------------------------------- Number of total partitions ------------------------------------
-    // TODO: Experiment with different number of partitions
-    public static final int N_PARTITIONS = 2;
-    // ------------------------------------------------------------------------------------------------
-    
-    public static final boolean DISABLE_BLOB_UPLOAD_TRIGGER = false;
+    public static final int N_PARTITIONS = 1;
+
 }

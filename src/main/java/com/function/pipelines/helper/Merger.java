@@ -1,10 +1,12 @@
 package com.function.pipelines.helper;
 
 import com.azure.core.util.BinaryData;
+import com.azure.storage.blob.specialized.BlobLeaseClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.function.config.PipelineConfig;
+import com.microsoft.azure.functions.ExecutionContext;
 
 
 import java.math.BigDecimal;
@@ -66,5 +68,32 @@ public class Merger {
         });
 
         return nationKeyToMeanAccountBalance;
+    }
+
+    /**
+     * Recursive lease attempt.
+     *
+     * @param leaseClient
+     * @param context
+     * @return
+     */
+    public static String acquireLease(BlobLeaseClient leaseClient, ExecutionContext context) {
+        try
+        {
+            String ret = leaseClient.acquireLease(20);
+            context.getLogger().info("Leased shared result blob.");
+            return ret;
+        }
+        catch (Exception e)
+        {
+            context.getLogger().info("blob can not be leased. Trying again. " + e.getMessage());
+            try {
+                Thread.sleep((int) (Math.random() * 500 + 100));
+                return acquireLease(leaseClient, context);
+            } catch (Exception e2) {
+                System.err.println(e2.getMessage());
+            }
+        }
+        return "";
     }
 }
