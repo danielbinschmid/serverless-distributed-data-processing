@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Launch UploadData",
+            "request": "launch",
+            "mainClass": "com.function.UploadData",
+            "projectName": "serverless-distributed-data-processing",
+            "args": "${workspaceFolder}/filelist.txt ${workspaceFolder}/testing_data/"
+        },
+        {
+            "type": "java",
+            "name": "Launch Initialization",
+            "request": "launch",
+            "mainClass": "com.function.Initialization",
+            "projectName": "serverless-distributed-data-processing",
+            "vmArgs": ""
+        },
+        {
+            "name": "Attach to Java Functions",
+            "type": "java",
+            "request": "attach",
+            "hostName": "127.0.0.1",
+            "port": 5005,
+            "preLaunchTask": "func: host start"
+        }
+    ]
+}
