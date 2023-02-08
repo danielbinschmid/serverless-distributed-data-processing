@@ -2,13 +2,13 @@
 const fs = require('fs')
 
 
-const outputName = "./filelist_json" + Math.random() + ".csv";
+const outputName = "./filelist_json" + Math.random() + ".json";
 
 const filelist = []
 
 for (var i = 0; i < 100; i++) {
     var num_prefix = i < 10? "0": ""; 
-    filelist.push("customer." + num_prefix + i + ".json");
+    filelist.push("customer." + num_prefix + i + ".csv");
 }
 
 const filelistJson = {
