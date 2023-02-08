@@ -60,4 +60,8 @@ public class BlobContainerWrapper
     public PagedIterable<BlobItem> getAllBlobs() {
         return blobContainerClient.listBlobs();
     }
+
+    public BlobClient getBlobClient(String filename) {
+        return blobContainerClient.getBlobClient(filename);
+    }
 }

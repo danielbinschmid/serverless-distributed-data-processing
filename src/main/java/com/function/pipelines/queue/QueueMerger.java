@@ -17,6 +17,7 @@ import java.util.Map;
 import com.function.config.QueuePipelineConfig;
 import com.function.pipelines.helper.BlobContainerWrapper;
 
+import com.function.pipelines.helper.Merger;
 import org.json.JSONObject;
 
 import com.azure.core.http.rest.Response;
@@ -74,7 +75,7 @@ public class QueueMerger {
         BlobLeaseClient leaseClient = new BlobLeaseClientBuilder()
                         .blobClient(blobClient)
                         .buildClient();
-        String leaseID = acquireLease(leaseClient, context);
+        String leaseID = Merger.acquireLease(leaseClient, context);
         
         // 2. load state
         BlobContainerWrapper resultBlobContainerWrapper = new BlobContainerWrapper(QueuePipelineConfig.RESULTS_BLOB_CONTAINER);
@@ -154,30 +155,4 @@ public class QueueMerger {
         }                
     }
 
-    /**
-     * Recursive lease attempt.
-     * 
-     * @param leaseClient
-     * @param context
-     * @return
-     */
-    private String acquireLease(BlobLeaseClient leaseClient, ExecutionContext context) {
-        try 
-        {  
-            String ret = leaseClient.acquireLease(20);
-            context.getLogger().info("Leased shared result blob.");
-            return ret;
-        } 
-        catch (Exception e) 
-        {
-            context.getLogger().info("blob can not be leased. Trying again. " + e.getMessage());
-            try { 
-                Thread.sleep(500);
-                return acquireLease(leaseClient, context);
-            } catch (Exception e2) {
-                System.err.println(e2.getMessage());
-            }    
-        }  
-        return "";
-    }
 }
