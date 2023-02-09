@@ -55,6 +55,8 @@ public class HttpEndpoint {
                     return request.createResponseBuilder(HttpStatus.OK).body(getMenuMessage()).build();
             }
         } else if (request.getHttpMethod() == HttpMethod.POST) {
+            // System.out.println("received: " + request.getBody().get());
+            // return request.createResponseBuilder(HttpStatus.OK).body("received: " + request.getBody().get()).build();
             switch(pipeline) {
                 case "queue":
                     
@@ -201,7 +203,6 @@ public class HttpEndpoint {
                 aggregationJobsContainer.writeFile(filenameForUpload + ".0.json", jsonObject.toString());
 
             } else {
-                // We need the byte length to partition the file :(
                 BinaryData binaryData = uploadContainer.readFile(blobName);
 
                 if (binaryData == null) {

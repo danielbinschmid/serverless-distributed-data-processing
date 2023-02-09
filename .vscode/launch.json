@@ -3,11 +3,19 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Launch UploadData",
+            "name": "Launch GetBenchmarkingResult",
             "request": "launch",
-            "mainClass": "com.function.UploadData",
+            "mainClass": "com.function.GetBenchmarkingResult",
             "projectName": "serverless-distributed-data-processing",
-            "args": "${workspaceFolder}/filelist.txt ${workspaceFolder}/testing_data/"
+            "args": "tenBatchQueue queue"
+        },
+        {
+            "type": "java",
+            "name": "Launch InitiateBenchmarking",
+            "request": "launch",
+            "mainClass": "com.function.InitiateBenchmarking",
+            "projectName": "serverless-distributed-data-processing",
+            "args": "${workspaceFolder}/benchmarking/batch_generator/nBatches_10/ https://cbdpqueue.azurewebsites.net/api/event-driven-pipeline/ queue tenBatchQueue"
         },
         {
             "type": "java",
@@ -15,7 +23,6 @@
             "request": "launch",
             "mainClass": "com.function.Initialization",
             "projectName": "serverless-distributed-data-processing",
-            "vmArgs": ""
         },
         {
             "name": "Attach to Java Functions",
