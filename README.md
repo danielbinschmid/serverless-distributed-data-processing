@@ -1,8 +1,12 @@
 # Serverless Distributed Data Processing Pipeline
 
-In this project, you will have to build a distributed data processing pipeline using Azure Functions.
+In this project, we built a distributed data processing pipeline using Azure Functions.
 
-The pipeline will receive CSV files containing customer data, and the goal is to calculate the mean customer account balance per country for demographic analysis purposes.
+The pipeline receives CSV files containing customer data and calculates the mean customer account balance per country for demographic analysis purposes.
+
+## Documentation
+
+![system_overview](./media/system_diagram.png)
 
 ## Pipeline Requirements
 
